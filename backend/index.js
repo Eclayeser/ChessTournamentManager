@@ -1,6 +1,19 @@
 const express = require("express");
 const cors = require("cors");
 const app = express();
+const pool = require("./database")
+
+//ROUTES//
+
+//create new user
+
+//app.post("/newUser", async (req, res) => {
+//    try {
+//        const {describtion}
+//    } catch (error) {
+        
+//    }
+//})
 
 //midleware
 app.use(cors());
