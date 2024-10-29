@@ -7,3 +7,5 @@ const pool = new Pool({
     port: 5432,
     database: "chess_manager_database"
 })
+
+module.exports = pool;
