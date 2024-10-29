@@ -13,18 +13,29 @@ app.listen(5000, () => {
 
 //ROUTES//
 
-//create new user
+//login
 
-app.post("/newUser", async (req, res) => {
+app.post("/login", async (req, res) => {
     try {
-        const { username } = req.body;
-        const newUser = await pool.query(
-            "INSERT INTO users (username) VALUES($1) RETURNING *",
-            [username]
+        const { username, password } = req.body;
+
+        // Check if username exists
+        const user = await pool.query(
+            "SELECT * FROM users WHERE username = $1 AND password = $2",
+            [username, password]
         );
-        res.json(newUser[0]);
+
+        if (user.rows.length === 0) {
+            // No match found; credentials are incorrect
+            return res.status(401).json({ success: false, message: "Invalid username or password" });
+        }
+
+        
+        // If there are matches, return success
+        res.json({ success: true, message: "Login Successful" });
     } catch (err) {
         console.error(err.message);
+        res.status(500).json({ success: false, message: "Server error" });
     }
 })
 
