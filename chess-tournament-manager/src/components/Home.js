@@ -1,7 +1,10 @@
+// Import React lib and react-router-dom library components
 import React, { Fragment } from "react";
 import { Link } from "react-router-dom";
 
+// Functional component
 function Home() {
+  //Display contents
   return (
     <Fragment>
         <div>
