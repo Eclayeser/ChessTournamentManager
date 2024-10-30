@@ -1,21 +1,25 @@
+// Import React lib and react-router-dom library components
 import React from "react";
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
+
+// import style sheet
 import './App.css';
 
-//components
-
+// Import components
+import Home from "./components/Home";
 import LoginUser from "./components/LogIn";
-import DisplayError from "./components/ErrorPage";
+import SignupUser from "./components/Signup";
 import DisplayDashboard from "./components/Dashboard";
-import HomePage from "./components/HomePage";
 
+
+// main
 function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<HomePage />} />
+        <Route path="/" element={<Home />} />
         <Route path="/login" element={<LoginUser />} />
-        <Route path="/error" element={<DisplayError />} />
+        <Route path="/signup" element={<SignupUser />} />
         <Route path="/dashboard" element={<DisplayDashboard />} />
       </Routes>
     </Router>
@@ -23,3 +27,4 @@ function App() {
 }
 
 export default App;
+

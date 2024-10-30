@@ -1,5 +1,7 @@
-
+// Import the Pool class from the pg module
 const Pool = require("pg").Pool;
+
+// Create a new instance with the database configuration
 const pool = new Pool({
     user: "postgres",
     password: "kram600232",
@@ -8,4 +10,8 @@ const pool = new Pool({
     database: "chess_manager_database"
 })
 
+// Export 
 module.exports = pool;
+
+
+
