@@ -20,9 +20,8 @@ const LoginUser = () => {
 
             const data = await response.json();
 
-
             if (data.success) {
-                navigate("/dashboard", { state: { user: username } });
+                navigate("/dashboard", { state: { name: data.user_data.firstname } });
             } else {
                 // Redirect to ErrorPage with a message
                 navigate("/error", { state: { message: "Invalid username or password" } });

@@ -27,15 +27,20 @@ app.post("/login", async (req, res) => {
 
         if (user.rows.length === 0) {
             // No match found; credentials are incorrect
-            return res.status(401).json({ success: false, message: "Invalid username or password" });
+            return res.status(401).json({ success: false, message: "Invalid username or password", data: user.rows[0] });
         }
 
         
         // If there are matches, return success
-        res.json({ success: true, message: "Login Successful" });
+        const userData = user.rows[0];
+        res.json({ success: true, message: "Login Successful", user_data: userData});
     } catch (err) {
         console.error(err.message);
         res.status(500).json({ success: false, message: "Server error" });
     }
 })
+
+
+
+
 

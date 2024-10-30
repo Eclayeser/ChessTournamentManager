@@ -4,12 +4,12 @@ import { useLocation } from "react-router-dom";
 const DisplayDashboard = () => {
 
     const location = useLocation();
-    const user = location.state?.user;
+    const user = location.state?.name;
 
     return (
         <div>
             <h1>Welcome to {user} Dashboard</h1>
-            <p>Back to <a href="/">LogIn</a></p>
+            <p>Back to <a href="/login">LogIn</a></p>
         </div>
     );
 };

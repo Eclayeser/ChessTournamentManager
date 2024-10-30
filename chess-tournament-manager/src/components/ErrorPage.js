@@ -10,7 +10,7 @@ const DisplayError = () => {
         <div>
             <h1>Error</h1>
             <p>{message}</p>
-            <p>Back to <a href="/">LogIn</a></p>
+            <p>Back to <a href="/login">LogIn</a></p>
         </div>
     );
 };
