@@ -3,14 +3,14 @@ const Pool = require("pg").Pool;
 
 // Create a new instance with the database configuration
 const pool = new Pool({
-    user: "postgres",
-    password: "kram600232",
-    host: "localhost",
-    port: 5432,
-    database: "chess_manager_database"
+    user: "postgres",                  // User
+    password: "kram600232",            // My password
+    host: "localhost",                 // Default host for PostgreSQL
+    port: 5432,                        // Default port for PostgreSQL
+    database: "chess_manager_database" // Name of the database
 })
 
-// Export 
+// Export the pool instance 
 module.exports = pool;
 
 

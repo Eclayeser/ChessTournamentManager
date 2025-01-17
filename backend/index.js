@@ -19,6 +19,21 @@ app.listen(5000, () => {
     console.log("server has started on port 5000")
 });
 
+// test connection to database
+function testConnection() {
+    // SELECT query to test connection
+    pool.query("SELECT 1", (error, res) => {
+        if (error) {
+            // output error message if failed
+            console.log(error);
+        } else {
+            // output success message if successful
+            console.log("Database connected");
+        }
+    });
+}
+// call the testConnection function
+testConnection();
 
 //ROUTES//
 
@@ -92,16 +107,16 @@ app.post("/signup", async (req, res) => {
 })
 
 
-//tournaments route  ---- to be finished
-app.get("/tournaments", async (req, res) => {
+//tournaments route
+app.post("/tournaments", async (req, res) => {
     try {
         const { user_id } = req.body;
         const tournaments = await pool.query(
-            "SELECT * ",
-            [username, password, firstName, surname, email]
+            "SELECT * FROM tournaments WHERE user_id = $1",
+            [user_id]
         );
         
-        res.json({ success: true, message: "User Created"});
+        res.json({ tournaments: tournaments.rows });
 
     } catch (err) {
         console.error(err.message);
@@ -111,5 +126,22 @@ app.get("/tournaments", async (req, res) => {
 
 
 
+
+
+//test post request to check how json data type is received
+/*
+app.post("/test", async (req, res) => {
+    try {
+        const { nickname } = req.body;
+        const user_score = await pool.query(
+            "SELECT * FROM test WHERE nick = $1", 
+            [nickname]      
+        );
+        res.json(user_score.rows[0]);
+    } catch (err) {
+        console.error(err.message);
+    }
+})
+*/
 
 
