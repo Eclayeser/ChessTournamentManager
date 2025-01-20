@@ -168,7 +168,7 @@ app.post("/tournaments", async (req, res) => {
                 "SELECT * FROM tournaments WHERE user_id = $1",
                 [result_object.user.user_id]
             );
-            res.json({ found: false, message: "Unauthorised Access", tournaments: tournaments.rows });
+            res.json({ found: true, message: "", tournaments: tournaments.rows });
         }
 
     //catch any errors
@@ -181,7 +181,9 @@ app.post("/tournaments", async (req, res) => {
 // Route to get tournament details by ID
 app.put("/tournament/:id", async (req, res) => {
     try {
+        //get the id from the URL
         const { id } = req.params;
+        //get the username and password from the body
         const { givenUsername, givenPassword } = req.body;
 
         //validate and authorise the user
@@ -197,12 +199,12 @@ app.put("/tournament/:id", async (req, res) => {
                 [id]
             );
             const tournament = response.rows[0];
-            res.json({found: true, message: "Authorised Access", tournament: tournament});
+            res.json({found: true, message: "", tournament_details: tournament});
         }
 
+    //catch any errors
     } catch (err) {
         console.error(err.message);
-        res.status(500).json({ error: "Server error" });
     }
 });
 

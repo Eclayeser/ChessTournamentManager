@@ -8,8 +8,7 @@ import { AppContext } from "./AppContext";
 //Functional component
 const LoginUser = () => {
     //variables
-    const { username, setUsername, password, setPassword } = useContext(AppContext);
-    const [error, setError] = useState("");
+    const { username, setUsername, password, setPassword, error, setError } = useContext(AppContext);
 
     const navigate = useNavigate();
 

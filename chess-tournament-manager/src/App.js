@@ -21,9 +21,10 @@ function App() {
   //global variables
   const[username, setUsername] = useState("");
   const[password, setPassword] = useState("");
+  const[error, setError] = useState("");
 
   return (
-    <AppContext.Provider value={{username, setUsername, password, setPassword}}>
+    <AppContext.Provider value={{username, setUsername, password, setPassword, error, setError}}>
       <Router>
         <Routes>
           <Route path="/" element={<Layout />}>

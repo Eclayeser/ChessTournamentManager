@@ -9,8 +9,8 @@ import { AppContext } from "./AppContext";
 const TournamentDetails = () => {
 
     //global variables
-    const { username, setUsername, password, setPassword } = useContext(AppContext);
-    console.log("Client:", username, password);
+    const { username, password, setError } = useContext(AppContext);
+
     // Get tournament ID from URL parameters
     const { tournamentId } = useParams();
 
@@ -19,30 +19,36 @@ const TournamentDetails = () => {
 
     const navigate = useNavigate();
 
+    //Fetch tournament details function
     const requestTournamentDetails = async () => {
         try {
-            
+            //object to be sent to server
             const body = { givenUsername: username, givenPassword: password };
 
+            //fetch request to server
             const response = await fetch(`http://localhost:5000/tournament/${tournamentId}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(body),
             });
-            const tournament_obj = await response.json();
+            //response from server
+            const server_res_obj = await response.json();
 
-            if (tournament_obj.found === true) {
-                setTournament(tournament_obj.tournament);
+            // if authorised -> set tournament details, else -> set error value and go to login page
+            if (server_res_obj.found === true) {
+                setTournament(server_res_obj.tournament_details);
             } else {
-                console.log("Unauthorised");
+                setError(server_res_obj.message);
                 navigate("/login");
             }
 
+        //catch any errors
         } catch (err) {
             console.error(err.message);
         }
     };
 
+    //Use useEffect to fetch tournament details when the component mounts
     useEffect(() => {
         requestTournamentDetails();
     }, [tournamentId]);
