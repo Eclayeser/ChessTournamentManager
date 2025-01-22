@@ -28,7 +28,7 @@ const TournamentDetails = () => {
             const server_res_obj = await response.json();
 
             // if authorised -> set tournament details, else -> set error value and go to login page
-            if (server_res_obj.found === true) {
+            if (server_res_obj.success=== true) {
                 setTournament(server_res_obj.tournament_details);
             } else {
                 navigate("/login");

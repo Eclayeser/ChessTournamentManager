@@ -12,6 +12,10 @@ function Layout() {
         navigate("/login");
     }
 
+    const clickToDashboard = () => {
+        navigate("/dashboard");
+    }
+
   //Display contents
   return (
     <div>
@@ -41,7 +45,7 @@ function Layout() {
                 {/*Contant Us Email*/}
                 <a href="mailto:mark.tarnavskyy@gmail.com">Contact Us</a>
                 {/*Try Service button - to be enabled later*/}
-                <button>Try Service</button>
+                <button onClick={clickToDashboard}>Try Service</button>
            </div>
 
            <div>

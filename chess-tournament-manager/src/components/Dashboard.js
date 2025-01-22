@@ -16,14 +16,12 @@ const DisplayDashboard = () => {
     const requestTournaments = async () => {
 
         const sessionID = localStorage.getItem("sessionID");
-        console.log("In dashboard:", sessionID);
-
 
         try {
             //fetch request to server
             const response = await fetch("http://localhost:5000/tournaments", {
                 method: "GET",
-                headers: { "Content-Type": "application/json", "Session-Id": sessionID },
+                headers: { "Content-Type": "application/json", "Session-Id": sessionID  },
             });
             //response from server
             const server_resObject = await response.json();
@@ -32,6 +30,9 @@ const DisplayDashboard = () => {
             if (server_resObject.found === true) {
                 setTournaments(server_resObject.tournaments);
             } else {
+                localStorage.removeItem("sessionID");
+                localStorage.setItem("globalMessage", server_resObject.message);
+
                 navigate("/login");
             }    
             
@@ -49,7 +50,7 @@ const DisplayDashboard = () => {
 
     // Handle click to navigate to tournament page
     const handleTournamentClick = (tournamentId) => {
-        navigate(`/tournament/${tournamentId}`);
+        navigate(`/tournament/${tournamentId}/settings`);
     };
     
     //Display content

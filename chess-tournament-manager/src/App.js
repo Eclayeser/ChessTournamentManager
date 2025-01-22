@@ -1,5 +1,5 @@
 // Import React lib and react-router-dom library components
-import React, { useState } from "react";
+import React from "react";
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 
 // Import components
@@ -9,9 +9,7 @@ import LoginUser from "./components/LogIn";
 import DisplayDashboard from "./components/Dashboard";
 import SignupUser from "./components/Signup";
 //import TournamentDetails from "./components/TournamentDetails";
-//import TournamentSettings from "./components/TournamentSettings";
-
-
+import TournamentSettings from "./components/TournamentSettings";
 
 // Main App Component
 function App() {
@@ -24,7 +22,7 @@ function App() {
           <Route path="/signup" element={<SignupUser />} />
           <Route path="/dashboard" element={<DisplayDashboard />} />
           {/*<Route path="/tournament/:tournamentId" element={<TournamentDetails />} />*/}
-          {/*<Route path="/tournament/:tournamentId" element={<TournamentDetails />} />*/}
+          <Route path="/tournament/:tournamentId/settings" element={<TournamentSettings />} />
         </Route>
       </Routes>
     </Router>

@@ -1,5 +1,5 @@
 //Import React lib and react-router-dom library components
-import React, { Fragment, useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 
 
@@ -48,9 +48,17 @@ const LoginUser = () => {
         }
     };
 
+    useEffect(() => {
+        if (localStorage.getItem("globalMessage")) {
+            setError(localStorage.getItem("globalMessage"));
+            localStorage.removeItem("globalMessage");       
+        }
+    }, []);
+
+    
     //Display contents
     return (
-        <Fragment>
+        <div>
             <h1>Log In to ChessManager</h1>
             
             {/* Dynamic Error Message */}
@@ -65,7 +73,7 @@ const LoginUser = () => {
             {/* Links to home and signup pages */}
             <p>Back to <Link to="/">Home Page</Link></p>
             <p>Create new <Link to="/signup">Account</Link></p>
-        </Fragment>
+        </div>
     );
 };
 

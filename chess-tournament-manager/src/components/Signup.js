@@ -33,18 +33,18 @@ const SignupUser = () => {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(body),
             });
-            const data = await response.json();
+            const server_resObject = await response.json();
 
             // if successful -> go to login page, else -> set error value to display
-            if (data.success === true) {
+            if (server_resObject.success === true) {
+                localStorage.setItem("globalMessage", server_resObject.message);
                 navigate("/login");
             } else {
-                setError(data.message);
+                setError(server_resObject.message);
             }
 
         } catch (err) {
             console.error(err.message);
-            setError("An error occurred during sign up");
         }
         // - //
     };
@@ -56,7 +56,7 @@ const SignupUser = () => {
                 <h2>Sign Up</h2>
 
                 {/* Dynamic Error Message */}
-                {error && <p style={{ color: "red" }}>{error}</p>}
+                <p style={{ color: "red" }}>{error}</p>
 
                 {/* Input Fields */}
                 <label>First name: <input type="text" value={firstName} onChange={e => setFirstName(e.target.value)} required/></label>
@@ -73,3 +73,5 @@ const SignupUser = () => {
 };
 
 export default SignupUser;
+
+//style={{ display: "flex", flexDirection: "column", maxWidth: "400px", margin: "15px" }}

@@ -35,10 +35,12 @@ function testConnection() {
 // call the testConnection function
 testConnection();
 
+//-----------------------------------------------------------------------
+
 //sessions
 const sessions = {};
 
-const SESSION_TTL = 0.5 * 60 * 1000; // 30 seconds
+const SESSION_TTL = 10 * 60 * 1000; // 10 minutes
 
 const cleanUpSessions = () => {
     const now = Date.now();
@@ -47,10 +49,13 @@ const cleanUpSessions = () => {
             delete sessions[sessionId];
         }
     }
-    console.log(sessions);
 };
 
 setInterval(cleanUpSessions, 0.1 * 60 * 1000); // 6 seconds
+
+//-----------------------------------------------------------------------
+
+//ROUTES//
 
 app.post("/login", async (req, res) => {
     //passed variables
@@ -70,13 +75,13 @@ app.post("/login", async (req, res) => {
     //check if empty or null
     if (!givenUsername || !givenPassword) {
         resObject.message = "Username and password cannot be null or empty";
-        res.json(resObject);
+        return res.json(resObject);
     }
             
     //check if username and password meet constraints
     if (!usernameConstraints.test(givenUsername) || (!passwordConstraints.test(givenPassword))) {
         resObject.message = "Invalid username or password";
-        res.json(resObject);
+        return res.json(resObject);
     }
 
     //sql query: looks for matches in the database after successful validation
@@ -88,7 +93,7 @@ app.post("/login", async (req, res) => {
     //if a match is not found
     if (user.rows.length === 0) {
         resObject.message = "User has NOT been found";
-        res.json(resObject);
+        return res.json(resObject);
     } else {
         //if a match is found
         resObject.found = true;
@@ -99,7 +104,7 @@ app.post("/login", async (req, res) => {
         sessions[sessionID] = {userID: user.rows[0].user_id};
         //return the sessionID to the client
         resObject.session = sessionID;
-        res.json(resObject);
+        return res.json(resObject);
     }
 })
 
@@ -112,6 +117,32 @@ app.post("/signup", async (req, res) => {
         //passed variables
         const { firstName, surname, username, email, password } = req.body;
         
+        //returning object
+        const resObject = {
+            success: false,
+            message: ""
+        };
+
+        //validation constraints, contents and range
+        const usernameConstraints = /^[a-zA-Z0-9_]{1,35}$/;
+        const passwordConstraints = /^[a-zA-Z0-9_]{1,40}$/;
+        const firstNameConstraints = /^[a-zA-Z]{1,20}$/;
+        const surnameConstraints = /^[a-zA-Z]{1,20}$/;
+        const emailConstraints = /^[a-zA-Z0-9_.@]{1,50}$/;
+
+
+        //check if empty or null
+        if (!firstName || !surname || !username || !email || !password) {
+            resObject.message = "Data field cannot be left empty ";
+            return res.json(resObject);
+        }
+                
+        //check if meet constraints
+        if (!usernameConstraints.test(username) || (!passwordConstraints.test(password)) || (!firstNameConstraints.test(firstName)) || (!surnameConstraints.test(surname)) || (!emailConstraints.test(email))) {
+            resObject.message = "Invalid details: check that do not exceed range limit and use appropriate characters";
+            return res.json(resObject);
+        }
+
         //check if username alredy exist with sql query//
         const usernameCheck = await pool.query(
             "SELECT * FROM users WHERE username = $1",
@@ -119,7 +150,8 @@ app.post("/signup", async (req, res) => {
         );
 
         if (usernameCheck.rows.length > 0) {
-            return res.json({ success: false, message: "Username is taken" });
+            resObject.message = "This username is already taken";
+            return res.json(resObject);
         }
         // - //
 
@@ -130,7 +162,8 @@ app.post("/signup", async (req, res) => {
         );
 
         if (emailCheck.rows.length > 0) {
-            return res.json({ success: false, message: "Account on this email already exists" });
+            resObject.message = "Account with this email already exists";
+            return res.json(resObject);
         }
         // - //
 
@@ -139,8 +172,9 @@ app.post("/signup", async (req, res) => {
             "INSERT INTO users (username, password, firstname, surname, email) VALUES ($1, $2, $3, $4, $5) ",
             [username, password, firstName, surname, email]
         );
-        
-        res.json({ success: true, message: "User Created"});
+        resObject.success = true;
+        resObject.message = "Account has been created";
+        return res.json(resObject);
 
     } catch (err) {
         console.error(err.message);
@@ -151,23 +185,33 @@ app.post("/signup", async (req, res) => {
 //tournaments route
 app.get("/tournaments", async (req, res) => {
     try {
+        //returning object
+        const resObject = {
+            found: false,
+            message: "",
+            tournaments: null
+        };
 
+        //get the sessionID from the headers
         const sessionID = req.headers["session-id"];
-        console.log("first:", sessionID);
 
         if (!sessionID || !sessions[sessionID]) {
-            return res.status(401).json({ found: false, message: "Unauthorised Access", tournaments: null});
+            resObject.message = "Session has expired";
+            return res.status(401).json(resObject);
         }
 
+        //get the userID from the session
         req.userID = sessions[sessionID].userID;
-        console.log("second:", req.userID);
 
         //if user is authorised, get the tournaments
         const tournaments = await pool.query(
             "SELECT * FROM tournaments WHERE user_id = $1",
             [req.userID]
         );
-        res.json({ found: true, message: "", tournaments: tournaments.rows });
+        resObject.tournaments = tournaments.rows;
+        resObject.found = true;
+        resObject.message = "Tournaments have been found";
+        return res.json(resObject);
 
     //catch any errors
     } catch (err) {
@@ -176,35 +220,47 @@ app.get("/tournaments", async (req, res) => {
 })
 
 
+
+
+
 // Route to get tournament details by ID
-app.post("/tournament/:id", async (req, res) => {
+app.get("/tournament/:id/details", async (req, res) => {
     try {
+        //returning object
+        const resObject = {
+            success: false,
+            message: "",
+            details: null
+        };
+
         //get the id from the URL
         const { id } = req.params;
-        //get the username and password from the body
-        const { givenUsername, givenPassword } = req.body;
 
-        //validate and authorise the user
-        const result_object = await checkAuthorised(givenUsername, givenPassword);
+        //get the sessionID from the headers
+        const sessionID = req.headers["session-id"];
 
-        //if user is not found for any reason
-        if (!result_object.found) {
-            return res.status(401).json({ found: false, message: "Unauthorised Access" });
-        } else {
-            //if user is authorised, get the tournament details
-            const response = await pool.query(
-                "SELECT * FROM tournaments WHERE tournament_id = $1",
-                [id]
-            );
-            const tournament = response.rows[0];
-            res.json({found: true, message: "", tournament_details: tournament});
+        if (!sessionID || !sessions[sessionID]) {
+            resObject.message = "Session has expired";
+            return res.status(401).json(resObject);
         }
+
+
+        //if user is authorised, get the tournament details
+        const response = await pool.query(
+            "SELECT * FROM tournaments WHERE tournament_id = $1",
+            [id]
+        );
+        const tournament = response.rows[0];
+        console.log(tournament);
+        return res.json({success: true, message: "Details retrieved", details: tournament});
+        
 
     //catch any errors
     } catch (err) {
         console.error(err.message);
     }
 });
+
 
 
 /*
