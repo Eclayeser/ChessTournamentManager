@@ -1,15 +1,11 @@
 // Import React lib and react-router-dom library components
-import React, { useState, useEffect, useContext } from "react";
+
+import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 
-//Import AppContext
-import { AppContext } from "./AppContext";
 
 // Functional component
 const TournamentDetails = () => {
-
-    //global variables
-    const { username, password, setError } = useContext(AppContext);
 
     // Get tournament ID from URL parameters
     const { tournamentId } = useParams();
@@ -22,12 +18,9 @@ const TournamentDetails = () => {
     //Fetch tournament details function
     const requestTournamentDetails = async () => {
         try {
-            //object to be sent to server
-            const body = { givenUsername: username, givenPassword: password };
-
             //fetch request to server
             const response = await fetch(`http://localhost:5000/tournament/${tournamentId}`, {
-                method: "PUT",
+                method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(body),
             });
@@ -38,7 +31,6 @@ const TournamentDetails = () => {
             if (server_res_obj.found === true) {
                 setTournament(server_res_obj.tournament_details);
             } else {
-                setError(server_res_obj.message);
                 navigate("/login");
             }
 

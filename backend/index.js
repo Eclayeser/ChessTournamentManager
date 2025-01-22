@@ -35,6 +35,179 @@ function testConnection() {
 // call the testConnection function
 testConnection();
 
+//sessions
+const sessions = {};
+
+const SESSION_TTL = 0.5 * 60 * 1000; // 30 seconds
+
+const cleanUpSessions = () => {
+    const now = Date.now();
+    for (const sessionId in sessions) {
+        if (now - parseInt(sessionId.split('-')[1]) > SESSION_TTL) {
+            delete sessions[sessionId];
+        }
+    }
+    console.log(sessions);
+};
+
+setInterval(cleanUpSessions, 0.1 * 60 * 1000); // 6 seconds
+
+app.post("/login", async (req, res) => {
+    //passed variables
+    const { givenUsername, givenPassword } = req.body;
+
+    //returning object
+    const resObject = {
+        found: false,
+        message: "",
+        session: null
+    };
+
+    //validation constraints, contents and range
+    const usernameConstraints = /^[a-zA-Z0-9_]{1,35}$/;
+    const passwordConstraints = /^[a-zA-Z0-9_]{1,40}$/;
+
+    //check if empty or null
+    if (!givenUsername || !givenPassword) {
+        resObject.message = "Username and password cannot be null or empty";
+        res.json(resObject);
+    }
+            
+    //check if username and password meet constraints
+    if (!usernameConstraints.test(givenUsername) || (!passwordConstraints.test(givenPassword))) {
+        resObject.message = "Invalid username or password";
+        res.json(resObject);
+    }
+
+    //sql query: looks for matches in the database after successful validation
+    const user = await pool.query(
+        "SELECT * FROM users WHERE username = $1 AND password = $2",
+        [givenUsername, givenPassword]
+    );
+
+    //if a match is not found
+    if (user.rows.length === 0) {
+        resObject.message = "User has NOT been found";
+        res.json(resObject);
+    } else {
+        //if a match is found
+        resObject.found = true;
+        resObject.message = "User has been found";
+        //create a sessionID
+        const sessionID = `${givenUsername}-${Date.now()}`;
+        //store the sessionID in the sessions object
+        sessions[sessionID] = {userID: user.rows[0].user_id};
+        //return the sessionID to the client
+        resObject.session = sessionID;
+        res.json(resObject);
+    }
+})
+
+
+
+
+//singup route
+app.post("/signup", async (req, res) => {
+    try {
+        //passed variables
+        const { firstName, surname, username, email, password } = req.body;
+        
+        //check if username alredy exist with sql query//
+        const usernameCheck = await pool.query(
+            "SELECT * FROM users WHERE username = $1",
+            [username]
+        );
+
+        if (usernameCheck.rows.length > 0) {
+            return res.json({ success: false, message: "Username is taken" });
+        }
+        // - //
+
+        //check if email already exists with sql query//
+        const emailCheck = await pool.query(
+            "SELECT * FROM users WHERE email = $1",
+            [email]
+        );
+
+        if (emailCheck.rows.length > 0) {
+            return res.json({ success: false, message: "Account on this email already exists" });
+        }
+        // - //
+
+        //insert new user if previous checks are passed//
+        const newUser = await pool.query(
+            "INSERT INTO users (username, password, firstname, surname, email) VALUES ($1, $2, $3, $4, $5) ",
+            [username, password, firstName, surname, email]
+        );
+        
+        res.json({ success: true, message: "User Created"});
+
+    } catch (err) {
+        console.error(err.message);
+    }
+})
+
+
+//tournaments route
+app.get("/tournaments", async (req, res) => {
+    try {
+
+        const sessionID = req.headers["session-id"];
+        console.log("first:", sessionID);
+
+        if (!sessionID || !sessions[sessionID]) {
+            return res.status(401).json({ found: false, message: "Unauthorised Access", tournaments: null});
+        }
+
+        req.userID = sessions[sessionID].userID;
+        console.log("second:", req.userID);
+
+        //if user is authorised, get the tournaments
+        const tournaments = await pool.query(
+            "SELECT * FROM tournaments WHERE user_id = $1",
+            [req.userID]
+        );
+        res.json({ found: true, message: "", tournaments: tournaments.rows });
+
+    //catch any errors
+    } catch (err) {
+        console.error(err.message);
+    }
+})
+
+
+// Route to get tournament details by ID
+app.post("/tournament/:id", async (req, res) => {
+    try {
+        //get the id from the URL
+        const { id } = req.params;
+        //get the username and password from the body
+        const { givenUsername, givenPassword } = req.body;
+
+        //validate and authorise the user
+        const result_object = await checkAuthorised(givenUsername, givenPassword);
+
+        //if user is not found for any reason
+        if (!result_object.found) {
+            return res.status(401).json({ found: false, message: "Unauthorised Access" });
+        } else {
+            //if user is authorised, get the tournament details
+            const response = await pool.query(
+                "SELECT * FROM tournaments WHERE tournament_id = $1",
+                [id]
+            );
+            const tournament = response.rows[0];
+            res.json({found: true, message: "", tournament_details: tournament});
+        }
+
+    //catch any errors
+    } catch (err) {
+        console.error(err.message);
+    }
+});
+
+
+/*
 //check if the access is authorised, function to be used multiple times accross the routes
 async function checkAuthorised(username, password) {
     //returning object
@@ -103,52 +276,10 @@ app.post("/login", async (req, res) => {
         console.error(err.message);
     }
 })
+*/
 
 
-
-
-
-//singup route
-app.post("/signup", async (req, res) => {
-    try {
-        //passed variables
-        const { firstName, surname, username, email, password } = req.body;
-        
-        //check if username alredy exist with sql query//
-        const usernameCheck = await pool.query(
-            "SELECT * FROM users WHERE username = $1",
-            [username]
-        );
-
-        if (usernameCheck.rows.length > 0) {
-            return res.json({ success: false, message: "Username is taken" });
-        }
-        // - //
-
-        //check if email already exists with sql query//
-        const emailCheck = await pool.query(
-            "SELECT * FROM users WHERE email = $1",
-            [email]
-        );
-
-        if (emailCheck.rows.length > 0) {
-            return res.json({ success: false, message: "Account on this email already exists" });
-        }
-        // - //
-
-        //insert new user if previous checks are passed//
-        const newUser = await pool.query(
-            "INSERT INTO users (username, password, firstname, surname, email) VALUES ($1, $2, $3, $4, $5) ",
-            [username, password, firstName, surname, email]
-        );
-        
-        res.json({ success: true, message: "User Created"});
-
-    } catch (err) {
-        console.error(err.message);
-    }
-})
-
+/*
 
 //tournaments route
 app.post("/tournaments", async (req, res) => {
@@ -175,155 +306,4 @@ app.post("/tournaments", async (req, res) => {
     } catch (err) {
         console.error(err.message);
     }
-})
-
-
-// Route to get tournament details by ID
-app.put("/tournament/:id", async (req, res) => {
-    try {
-        //get the id from the URL
-        const { id } = req.params;
-        //get the username and password from the body
-        const { givenUsername, givenPassword } = req.body;
-
-        //validate and authorise the user
-        const result_object = await checkAuthorised(givenUsername, givenPassword);
-
-        //if user is not found for any reason
-        if (!result_object.found) {
-            return res.status(401).json({ found: false, message: "Unauthorised Access" });
-        } else {
-            //if user is authorised, get the tournament details
-            const response = await pool.query(
-                "SELECT * FROM tournaments WHERE tournament_id = $1",
-                [id]
-            );
-            const tournament = response.rows[0];
-            res.json({found: true, message: "", tournament_details: tournament});
-        }
-
-    //catch any errors
-    } catch (err) {
-        console.error(err.message);
-    }
-});
-
-
-//test post request to check how json data type is received
-/*
-app.post("/test", async (req, res) => {
-    try {
-        const { nickname } = req.body;
-        const user_score = await pool.query(
-            "SELECT * FROM test WHERE nick = $1", 
-            [nickname]      
-        );
-        res.json(user_score.rows[0]);
-    } catch (err) {
-        console.error(err.message);
-    }
-})
-*/
-
-
-
-/*
-//login route
-app.post("/login", async (req, res) => {
-    try {
-        
-        //passed variables
-        const { username, password } = req.body;
-
-        //sql query
-        const user = await pool.query(
-            "SELECT * FROM users WHERE username = $1 AND password = $2",
-            [username, password]
-        );
-
-        //if username and password do not exist
-        if (user.rows.length === 0) {
-            return res.status(401).json({ success: false, message: "Invalid username or password", data: user.rows[0] });
-        }
- 
-        //if exists
-        res.json({ found: true, message: "Login Successful", user_data: user.rows[0]});
-
-    } catch (err) {
-        console.error(err.message);
-        res.status(500).json({ success: false, message: "Server error" });
-    }
-})
-*/
-
-
-/*
-//login route
-app.post("/login", async (req, res) => {
-    try {
-        //passed values
-        const { givenUsername, givenPassword } = req.body;
-        //validation constraints
-        const usernameConstraints = /^[a-zA-Z0-9_]{1,35}$/;
-        const passwordConstraints = /^[a-zA-Z0-9_]{1,40}$/;
-        
-        //check if empty or null
-        if (!givenUsername || !givenPassword) {
-            return res.status(400).json({ 
-                found: false, 
-                message: "Username and password cannot be null or empty",});
-        }
-        
-        //check if username and password meet constraints
-        if (!usernameConstraints.test(givenUsername) || (!passwordConstraints.test(givenPassword))) {
-            return res.status(400).json({
-                found: false, 
-                message: "Invalid username or password"});
-        }
-        
-        //sql query: looks for matches in the database
-        const user = await pool.query(
-            "SELECT * FROM users WHERE username = $1 AND password = $2",
-            [givenUsername, givenPassword]
-        );
-
-        //if a match is not found
-        if (user.rows.length === 0) {
-            return res.status(401).json({ found: false, message: "User has not been found"});
-        } else {
-            //if a match is found
-            res.json({ found: true, message: "Login Successful", user_id: user.rows[0].user_id });
-        }
-    
-    //catch any errors
-    } catch (err) {
-        console.error(err.message);
-    }
-})
-*/
-
-
-/*
-//authorise route
-app.post("/authorise", async (req, res) => {
-    try {
-        //passed values from body
-        const {givenUsername, givenPassword} = req.body;
-        console.log("Server:", givenUsername, givenPassword);
-        //validate and authorise the user
-        const result_object = await checkAuthorised(givenUsername, givenPassword);
-
-        console.log("Server result:", result_object.found);
-        //if user is not found for any reason
-        if (!result_object.found) {
-            return res.status(401).json({ found: false, message: "Unauthorised Access" });
-        } else {
-            return res.json({ found: true, message: "Authorised Access" });
-        }
-
-    //catch any errors
-    } catch (err) {
-        console.error(err.message);
-    }
-})
-*/
+})*/

@@ -1,14 +1,14 @@
 //Import React lib and react-router-dom library components
-import React, { Fragment, useState, useContext } from "react";
+import React, { Fragment, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 
-//Import AppContext
-import { AppContext } from "./AppContext";
 
 //Functional component
 const LoginUser = () => {
     //variables
-    const { username, setUsername, password, setPassword, error, setError } = useContext(AppContext);
+    const [username, setUsername] = useState("");
+    const [password, setPassword] = useState("");
+    const [error, setError] = useState("");
 
     const navigate = useNavigate();
 
@@ -29,13 +29,17 @@ const LoginUser = () => {
             });
 
             //response from server
-            const server_res_obj = await response.json();
-    
+            const server_resObject = await response.json();
+
             // if userFound == True -> go to the dashboard, else -> set error value to display
-            if (server_res_obj.found === true) {
+            if (server_resObject.found === true) {
+                //store sessionID in local storage
+                const sessionID = server_resObject.session;
+                localStorage.setItem("sessionID", sessionID);
+
                 navigate("/dashboard");
             } else {
-                setError(server_res_obj.message);
+                setError(server_resObject.message);
             }
 
         //catch any errors
