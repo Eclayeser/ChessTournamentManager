@@ -54,7 +54,7 @@ INSERT INTO tournaments (user_id, name, type, num_rounds, max_players, bye_value
 VALUES (1, 'TestTournament_1', 'test_type', 5, 1000, 0.5, 'test_tie_break', TRUE, '{{1, 1}}');
 
 INSERT INTO tournaments (user_id, name, type, num_rounds, max_players, bye_value, tie_break, hide_rating, forbidden)
-VALUES (1, 'TestTournament_2', 'test_type', 7, 10, 1, 'test_tie_break', TRUE, '{{1, 3}}');
+VALUES (4, 'TestTournament_8', 'test_type', 7, 10, 1, 'test_tie_break', TRUE, '{{1, 3}}');
 --Boundary Data: max_players (1000)
 
 --update data under hide_ratinh column where tournament_id = 1
@@ -105,7 +105,7 @@ CREATE TABLE entries(
 
 --insert data into entity <entries>
 INSERT INTO entries (tournament_id, player_id, score, predefined, eliminated)
-VALUES (1, 1, '{"colour": "W", "result": 0.5, "opponent_id": 0}', NULL, FALSE);
+VALUES (8, 1, '{"colour": "W", "result": 0.5, "opponent_id": 0}', NULL, FALSE);
 
 
 -------------------------------------------------------------------------------------------------------------------------
@@ -117,6 +117,9 @@ FROM tournaments
 JOIN entries ON tournaments.tournament_id = entries.tournament_id
 --join entity <players> with entity <entries> by player_id
 JOIN players ON entries.player_id = players.player_id;
+
+
+
 
 
 
@@ -158,7 +161,11 @@ ADD COLUMN user_ID INTEGER;
 
 
 
+ALTER TABLE tournaments DROP CONSTRAINT tournaments_user_id_fkey;
 
+ALTER TABLE tournaments
+ADD CONSTRAINT tournaments_user_id_fkey
+FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE;
 
 
 

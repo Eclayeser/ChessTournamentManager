@@ -10,10 +10,15 @@ function Home() {
   return (
       <div>
           <h1>Welcome to Chess Manager</h1>
-          <p>Please log in or sign up to continue.</p>
-          {/*Links to login and signup pages*/}
-          <p><Link to="/login">Log In</Link></p>
-          <p><Link to="/signup">Sign Up</Link></p>
+          { localStorage.getItem("sessionID") ? (null) : (
+            <div>
+              <p>Please log in or sign up to continue.</p>
+              {/*Links to login and signup pages*/}
+              <p><Link to="/login">Log In</Link></p>
+              <p><Link to="/signup">Sign Up</Link></p>
+            </div>
+          )
+          }
       </div>
   );
 }

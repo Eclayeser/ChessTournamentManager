@@ -8,7 +8,7 @@ import Layout from "./components/Layout";
 import LoginUser from "./components/LogIn";
 import DisplayDashboard from "./components/Dashboard";
 import SignupUser from "./components/Signup";
-//import TournamentDetails from "./components/TournamentDetails";
+import MyAccount from "./components/Account";
 import TournamentSettings from "./components/TournamentSettings";
 
 // Main App Component
@@ -21,8 +21,8 @@ function App() {
           <Route path="/login" element={<LoginUser />} />
           <Route path="/signup" element={<SignupUser />} />
           <Route path="/dashboard" element={<DisplayDashboard />} />
-          {/*<Route path="/tournament/:tournamentId" element={<TournamentDetails />} />*/}
           <Route path="/tournament/:tournamentId/settings" element={<TournamentSettings />} />
+          <Route path="/account" element={<MyAccount />} />
         </Route>
       </Routes>
     </Router>

@@ -2,6 +2,8 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 
+import Layout from "./Layout";
+
 
 //Functional component
 const LoginUser = () => {
@@ -49,6 +51,10 @@ const LoginUser = () => {
     };
 
     useEffect(() => {
+        if (localStorage.getItem("sessionID")) {
+            navigate("/dashboard");       
+        }
+
         if (localStorage.getItem("globalMessage")) {
             setError(localStorage.getItem("globalMessage"));
             localStorage.removeItem("globalMessage");       

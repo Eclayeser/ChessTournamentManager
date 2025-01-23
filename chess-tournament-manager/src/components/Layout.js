@@ -1,11 +1,15 @@
 // Import React lib and react-router-dom library components
-import React from "react";
-import { Outlet, useNavigate } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { Outlet, useNavigate, useLocation } from "react-router-dom";
 
 // Functional component
 function Layout() {
     
     //variable
+    const [loggedIn, setLoggedIn] = useState(false);
+
+    const location = useLocation();
+
     const navigate = useNavigate();
     //function that navigates to login page
     const clickToLogin = () => {
@@ -15,6 +19,23 @@ function Layout() {
     const clickToDashboard = () => {
         navigate("/dashboard");
     }
+
+    const clickToHome = () => {
+        navigate("/");
+    }
+ 
+    const clickToAccount = () => {
+        navigate("/account");
+    }
+
+
+    useEffect(() => {
+        if (localStorage.getItem("sessionID")) {
+            setLoggedIn(true);
+        } else {
+            setLoggedIn(false);
+        }
+    }, [location]);
 
   //Display contents
   return (
@@ -27,7 +48,15 @@ function Layout() {
            </div>
            <div>
                 {/*Places Log In button*/}
-                <button onClick={clickToLogin}>Log In</button>
+                {loggedIn ? (
+                    <div>
+                        <button onClick={clickToDashboard}>My Tournaments</button>
+                        <button onClick={clickToAccount}>My Account</button>
+                        <button onClick={clickToHome}>Home</button>
+                    </div>
+                ) : (
+                    <button onClick={clickToLogin}>Log In</button>
+                )}
                 <hr></hr>
            </div>
         </header>

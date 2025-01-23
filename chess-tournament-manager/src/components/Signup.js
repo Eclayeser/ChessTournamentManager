@@ -54,10 +54,8 @@ const SignupUser = () => {
         <div>
             <form onSubmit={onSubmitForm} style={{ display: "flex", flexDirection: "column", maxWidth: "400px", margin: "15px" }}>
                 <h2>Sign Up</h2>
-
                 {/* Dynamic Error Message */}
                 <p style={{ color: "red" }}>{error}</p>
-
                 {/* Input Fields */}
                 <label>First name: <input type="text" value={firstName} onChange={e => setFirstName(e.target.value)} required/></label>
                 <label>Surname: <input type="text" value={surname} onChange={e => setSurname(e.target.value)} required /></label>

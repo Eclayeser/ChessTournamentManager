@@ -8,16 +8,16 @@ const TournamentSettings = () => {
 
     //variables
     const [tournament, setTournament] = useState(null);
-    const [localMessage, setLocalMessage] = useState("");
 
     const [pendingName, setPendingName] = useState("");
-    const [pendingType, setPendingType] = useState("");
-    const [pendingTieBreak, setPendingTieBreak] = useState("");
+    const [pendingType, setType] = useState("");
+    const [pendingTieBreak, setTieBreak] = useState("");
     const [pendingRounds, setPendingRounds] = useState(0);
     const [pendingPlayers, setPendingPlayers] = useState(0);
     const [pendingHideRating, setPendingHideRating] = useState("");
     const [pendingByeVal, setPendingByeVal] = useState("");
 
+    const [error, setError] = useState("");
 
     
     const navigate = useNavigate();
@@ -38,16 +38,17 @@ const TournamentSettings = () => {
 
             // if authorised -> set tournament details, else -> set error value and go to login page
             if (server_resObject.success === true) {
+
                 setTournament(server_resObject.details);
+
+                setType(server_resObject.details.type);
+                setTieBreak(server_resObject.details.tie_break);
+
                 setPendingName(server_resObject.details.name);
-                setPendingType(server_resObject.details.type);
-                setPendingTieBreak(server_resObject.details.tie_break);
                 setPendingRounds(server_resObject.details.num_rounds);
                 setPendingPlayers(server_resObject.details.max_players);
                 setPendingHideRating(server_resObject.details.hide_rating);
                 setPendingByeVal(server_resObject.details.bye_value);
-                console.log(server_resObject.details);
-                console.log(server_resObject.details.name);
             } else {
                 localStorage.removeItem("sessionID");
                 localStorage.setItem("globalMessage", server_resObject.message);
@@ -60,6 +61,53 @@ const TournamentSettings = () => {
         }
     };
 
+    const updateTournamentDetails = async e => {
+        e.preventDefault();
+        
+        try {
+            const sessionID = localStorage.getItem("sessionID");
+            const body = {
+                        name: pendingName,
+                        numRounds: pendingRounds,
+                        maxPlayers: pendingPlayers,
+                        byeValue: pendingByeVal,
+                        hideRating: pendingHideRating
+            }; 
+
+            //fetch request to server
+            const response = await fetch(`http://localhost:5000/tournament/${tournamentId}/updateDetails`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json", "Session-Id": sessionID },
+                body: JSON.stringify(body),
+            });
+            //response from server
+            const server_resObject = await response.json();
+            console.log(server_resObject);
+
+            // if authorised -> set new tournament details
+            if (server_resObject.success === true) {
+                setError(server_resObject.message);
+                //requestTournamentDetails();
+            } 
+            else {
+                // update could not happen due to session expiration
+                if (server_resObject.found === false) {
+                    localStorage.removeItem("sessionID");
+                    localStorage.setItem("globalMessage", server_resObject.message);
+                    navigate("/login");
+                }
+                // delete failed due to server error
+                else {
+                    setError(server_resObject.message);
+                }
+            }
+
+        //catch any errors
+        } catch (err) {
+            console.error(err.message);
+        }
+    }
+
 
     //Use useEffect to fetch tournament details when the component mounts
     useEffect(() => {
@@ -69,8 +117,8 @@ const TournamentSettings = () => {
     return (
         <div>
             <h1>Tournament Settings</h1>
-            <p>{localMessage}</p>
-            <form style={{ display: "flex", flexDirection: "column", maxWidth: "400px", margin: "15px" }}>
+            {error && <p className="error">{error}</p>}
+            <form onSubmit={updateTournamentDetails} style={{ display: "flex", flexDirection: "column", maxWidth: "400px", margin: "15px" }}>
                 <label> Tournament Name:
                     <input type="text" value={pendingName} onChange={(e) => setPendingName(e.target.value)} required />
                 </label>
