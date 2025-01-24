@@ -10,6 +10,8 @@ import DisplayDashboard from "./components/Dashboard";
 import SignupUser from "./components/Signup";
 import MyAccount from "./components/Account";
 import TournamentSettings from "./components/TournamentSettings";
+import CreateTournamentDisplay from "./components/CreateTournament";
+import DisplayPlayers from "./components/TournamentPlayers";
 
 // Main App Component
 function App() {
@@ -21,7 +23,9 @@ function App() {
           <Route path="/login" element={<LoginUser />} />
           <Route path="/signup" element={<SignupUser />} />
           <Route path="/dashboard" element={<DisplayDashboard />} />
+          <Route path="/create-tournament" element={<CreateTournamentDisplay />} />
           <Route path="/tournament/:tournamentId/settings" element={<TournamentSettings />} />
+          <Route path="/tournament/:tournamentId/players" element={<DisplayPlayers />} />
           <Route path="/account" element={<MyAccount />} />
         </Route>
       </Routes>

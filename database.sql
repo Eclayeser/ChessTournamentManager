@@ -54,7 +54,7 @@ INSERT INTO tournaments (user_id, name, type, num_rounds, max_players, bye_value
 VALUES (1, 'TestTournament_1', 'test_type', 5, 1000, 0.5, 'test_tie_break', TRUE, '{{1, 1}}');
 
 INSERT INTO tournaments (user_id, name, type, num_rounds, max_players, bye_value, tie_break, hide_rating, forbidden)
-VALUES (4, 'TestTournament_8', 'test_type', 7, 10, 1, 'test_tie_break', TRUE, '{{1, 3}}');
+VALUES (2, 'TestTournament_8', 'test_type', 7, 10, 1, 'test_tie_break', TRUE, '{{1, 3}}');
 --Boundary Data: max_players (1000)
 
 --update data under hide_ratinh column where tournament_id = 1

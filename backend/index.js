@@ -465,10 +465,9 @@ app.delete("/deleteAccount", async (req, res) => {
 
 app.put("/tournament/:id/updateDetails", async (req, res) => {
     try {
-        console.log("Req received");
+
         //passed variables
-        const { name, numRounds, maxPlayers, byeValue, hideRating } = req.body;
-        console.log(name, numRounds, maxPlayers, byeValue, hideRating);
+        const { name, num_rounds, max_players, bye_value, hide_rating } = req.body;
 
         //returning object
         const resObject = {
@@ -492,45 +491,212 @@ app.put("/tournament/:id/updateDetails", async (req, res) => {
         //get the userID from the session
         req.userID = sessions[sessionID].userID;
 
-        //validation constraints, contents and range
-        const nameConstraints = /^[a-zA-Z_]{1,50}$/;
-        //only integers from 1 to 1000
-        const maxPlayersConstraints = /^(?:[1-9]|[1-9][0-9]|[1-9][0-9][0-9]|1000)$/;
-        //only integers from 1 to 50
-        const numRoundsConstraints = /^(?:[1-9]|[1-4][0-9]|50)$/;
-        //only 0, 0.5, or 1
-        const byeValueConstraints = /^(0|0\.5|1)$/;
-        //only true or false
-        const hideRatingConstraints = /^(true|false)$/;
+        //validation constraints
+        const nameConstraints = /^[a-zA-Z_0-9 ]{1,50}$/;
+  
 
         //check if empty or null
-        if (!name || !numRounds || !maxPlayers || !byeValue || !hideRating) {
+        if (!name || !num_rounds || !max_players) {
             resObject.message = "Data field cannot be left empty ";
             return res.json(resObject);
         }
 
         //check if meet constraints
-        if ((!nameConstraints.test(name)) || (!numRoundsConstraints.test(String(numRounds))) || (!maxPlayersConstraints.test(String(maxPlayers))) || (!byeValueConstraints.test(String(byeValue))) || (!hideRatingConstraints.test(String(hideRating)))) {
-            resObject.message = "Invalid details: check that do not exceed range limit and use appropriate characters";
-            console.log(!nameConstraints.test(name))
-            console.log(!numRoundsConstraints.test(String(numRounds)))
-            console.log(!maxPlayersConstraints.test(String(maxPlayers)))
-            console.log(!byeValueConstraints.test(String(byeValue)))
-            console.log(!hideRatingConstraints.test(String(hideRating)))
+        if ( num_rounds < 1 || num_rounds > 50 || !Number.isInteger(num_rounds)) {
+            resObject.message = "Number of rounds must be an integer between 1 and 50";
+            return res.json(resObject);
+        }
+        if ( max_players < 1 || max_players > 1000 || !Number.isInteger(max_players)) {
+            resObject.message = "Number of players must be an integer between 1 and 1000";
+            return res.json(resObject);
+        }
+        if (  bye_value !== 0 && bye_value !== 0.5 && bye_value !== 1) {
+            resObject.message = "Bye value can only take the values 0, 0.5 or 1";
+            return res.json(resObject);
+        }
+        if ( hide_rating !== true && hide_rating !== false) {
+            resObject.message = "Hide rating can only be true or false";
+            return res.json(resObject);
+        }
+        if ((!nameConstraints.test(name))) {
+            resObject.message = "Name exceeds range limit or contains inappropriate characters";
             return res.json(resObject);
         }
 
-        console.log("Constraints passed");
 
         //update tournament details
         const updatedTournament = await pool.query(
             "UPDATE tournaments SET name = $1, num_rounds = $2, max_players = $3, bye_value = $4, hide_rating = $5 WHERE tournament_id = $6",
-            [name, numRounds, maxPlayers, byeValue, hideRating, id]
+            [name, num_rounds, max_players, bye_value, hide_rating, id]
         );
         resObject.success = true;
         resObject.message = "Details have been updated";
         return res.json(resObject);
 
+    } catch (err) {
+        console.error(err.message);
+    }
+});
+
+app.delete("/tournament/:id/delete", async (req, res) => {
+    try {
+        //returning object
+        const resObject = {
+            found: false,
+            success: false,
+            message: ""
+        };
+
+        //get the id from the URL
+        const { id } = req.params;
+
+        //get the sessionID from the headers
+        const sessionID = req.headers["session-id"];
+
+        if (!sessionID || !sessions[sessionID]) {
+            resObject.message = "Session has expired";
+            return res.status(401).json(resObject);
+        }
+        resObject.found = true;
+
+        //delete tournament
+        const deleteTournament = await pool.query(
+            "DELETE FROM tournaments WHERE tournament_id = $1",
+            [id]
+        );
+        resObject.success = true;
+        resObject.message = "Tournament has been deleted";
+        return res.json(resObject);
+
+    } catch (err) {
+        console.error(err.message);
+        resObject.message = "Server Error";
+        return res.json(resObject);
+    }
+});
+
+app.post("/tournament/create", async (req, res) => {
+    try {
+        //returning object
+        const resObject = {
+            found: false,
+            success: false,
+            message: "",
+            tournament_id: null
+        };
+
+        //get the sessionID from the headers
+        const sessionID = req.headers["session-id"];
+
+        const { name, type, tie_break, num_rounds, max_players, hide_rating, bye_value } = req.body;
+        console.log(name, type, tie_break, num_rounds, max_players, hide_rating, bye_value);
+
+        if (!sessionID || !sessions[sessionID]) {
+            resObject.message = "Session has expired";
+            return res.status(401).json(resObject);
+        }
+        resObject.found = true;
+
+        //get the userID from the session
+        req.userID = sessions[sessionID].userID;
+
+        //validation constraints
+        const nameConstraints = /^[a-zA-Z_0-9 ]{1,50}$/;
+  
+        //check if empty or null
+        if (!name || !num_rounds || !max_players || !type || !tie_break) {
+            resObject.message = "Data field cannot be left empty ";
+            return res.json(resObject);
+        }
+
+        //check if meet constraints
+        if ( num_rounds < 1 || num_rounds > 50 || !Number.isInteger(num_rounds)) {
+            resObject.message = "Number of rounds must be an integer between 1 and 50";
+            return res.json(resObject);
+        }
+        if ( max_players < 1 || max_players > 1000 || !Number.isInteger(max_players)) {
+            resObject.message = "Number of players must be an integer between 1 and 1000";
+            return res.json(resObject);
+        }
+        if (  bye_value !== 0 && bye_value !== 0.5 && bye_value !== 1) {
+            resObject.message = "Bye value can only take the values 0, 0.5 or 1";
+            return res.json(resObject);
+        }
+        if ( hide_rating !== true && hide_rating !== false) {
+            resObject.message = "Hide rating can only be true or false";
+            return res.json(resObject);
+        }
+        if ((!nameConstraints.test(name))) {
+            resObject.message = "Name exceeds range limit or contains inappropriate characters";
+            return res.json(resObject);
+        }
+        if (type !== "Round-robin" && type !== "Swiss System" && type !== "Knockout") {
+            resObject.message = "Tournament type can only be of the available types";
+            return res.json(resObject);
+        }
+        if (tie_break !== "Sonneborn-Berger" && tie_break !== "Buchholz Total" && tie_break !== "Buchholz Cut 1" && tie_break !== "Buchholz Cut Median") {
+            resObject.message = "Tie break can only be of the available types";
+            return res.json(resObject);
+        }
+
+        //insert new tournament
+        const newTournament = await pool.query(
+            "INSERT INTO tournaments (user_id, name, type, num_rounds, max_players, bye_value, tie_break, hide_rating, forbidden) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING tournament_id",
+            [req.userID, name, type, num_rounds, max_players, bye_value, tie_break, hide_rating, null]
+        );
+        resObject.success = true;
+        resObject.message = "Tournament has been created";
+        resObject.tournament_id = newTournament.rows[0].tournament_id;
+        return res.json(resObject);
+
+    } catch (err) {
+        console.error(err.message);
+        resObject.message = "Server Error";
+        return res.json(resObject);
+    }
+});
+
+app.get("/tournament/:id/players", async (req, res) => {
+    try {
+        //returning object
+        const resObject = {
+            success: false,
+            found: false,
+            message: "",
+            players: null,
+            tournament: null
+        };
+
+        //get the id from the URL
+        const { id } = req.params;
+
+        //get the sessionID from the headers
+        const sessionID = req.headers["session-id"];
+
+        if (!sessionID || !sessions[sessionID]) {
+            resObject.message = "Session has expired";
+            return res.status(401).json(resObject);
+        }
+        resObject.found = true;
+
+        //if user is authorised, get the players
+        const players = await pool.query(
+            "SELECT players.* FROM players JOIN entries ON players.player_id = entries.player_id WHERE entries.tournament_id = $1",
+            [id]
+        );
+        resObject.players = players.rows;
+
+        const tournament = await pool.query(
+            "SELECT * FROM tournaments WHERE tournament_id = $1",
+            [id]
+        );
+        resObject.tournament = tournament.rows[0];
+
+        resObject.success = true;
+        resObject.message = "Players have been found";
+        return res.json(resObject);
+
+    //catch any errors
     } catch (err) {
         console.error(err.message);
     }

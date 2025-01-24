@@ -65,7 +65,7 @@ const DisplayDashboard = () => {
                     </li>
                 ))}
             </ul>
-            <button>Create New Tournament</button>
+            <button onClick={() => navigate("/create-tournament")}>Create New Tournament</button>
         </div> 
     );
 };

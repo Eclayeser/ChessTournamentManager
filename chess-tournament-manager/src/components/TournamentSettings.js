@@ -1,6 +1,8 @@
 import { useState, useEffect} from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
+import Modal from "./ModalTemplate";
+
 const TournamentSettings = () => {
     // Get tournament ID from URL parameters
     const { tournamentId } = useParams();
@@ -21,9 +23,26 @@ const TournamentSettings = () => {
 
     
     const navigate = useNavigate();
+
+    //State variables and functions for Delete Confirmation Pop-Up
+    const [isModalOpenDelConf, setIsModalOpenDelConf] = useState(false);
+
+    const openModalDelConf = () => {
+        setIsModalOpenDelConf(true);
+
+        setError("");
+    }
+
+    const closeModalDelConf = () => {
+        setIsModalOpenDelConf(false);
+
+        setError("");
+    }
     
     //Fetch tournament details function
     const requestTournamentDetails = async () => {
+        setError("");
+
         try {
             const sessionID = localStorage.getItem("sessionID");
 
@@ -63,7 +82,8 @@ const TournamentSettings = () => {
 
     const updateTournamentDetails = async e => {
         e.preventDefault();
-        
+        setError("");
+
         try {
             const sessionID = localStorage.getItem("sessionID");
             const body = {
@@ -86,11 +106,48 @@ const TournamentSettings = () => {
 
             // if authorised -> set new tournament details
             if (server_resObject.success === true) {
-                setError(server_resObject.message);
-                //requestTournamentDetails();
+                console.log(server_resObject.message);
             } 
             else {
                 // update could not happen due to session expiration
+                if (server_resObject.found === false) {
+                    localStorage.removeItem("sessionID");
+                    localStorage.setItem("globalMessage", server_resObject.message);
+                    navigate("/login");
+                }
+                // delete failed due to server error
+                else {
+                    setError(server_resObject.message);
+                }
+            }
+
+        //catch any errors
+        } catch (err) {
+            console.error(err.message);
+        }
+    }
+
+    const deleteTournament = async () => {
+        setError("");
+
+        try {
+            const sessionID = localStorage.getItem("sessionID");
+
+            //fetch request to server
+            const response = await fetch(`http://localhost:5000/tournament/${tournamentId}/delete`, {
+                method: "DELETE",
+                headers: { "Content-Type": "application/json", "Session-Id": sessionID },
+            });
+            //response from server
+            const server_resObject = await response.json();
+            console.log(server_resObject);
+
+            // if authorised -> go to dashboard
+            if (server_resObject.success === true) {
+                navigate("/dashboard");
+            } 
+            else {
+                // delete could not happen due to session expiration
                 if (server_resObject.found === false) {
                     localStorage.removeItem("sessionID");
                     localStorage.setItem("globalMessage", server_resObject.message);
@@ -124,11 +181,11 @@ const TournamentSettings = () => {
                 </label>
 
                 <label> Number of Rounds:
-                    <input type="number" value={pendingRounds} onChange={(e) => setPendingRounds(Number(e.target.value))} required />
+                    <input type="number" value={pendingRounds} onChange={(e) => setPendingRounds(Number(e.target.value))} min={1} max={50} required />
                 </label>
 
                 <label> Maximum Players:
-                    <input type="number" value={pendingPlayers} onChange={(e) => setPendingPlayers(Number(e.target.value))} required />
+                    <input type="number" value={pendingPlayers} onChange={(e) => setPendingPlayers(Number(e.target.value))} min={1} max={1000} required />
                 </label>
 
                 <label> Tournament Type:
@@ -136,7 +193,11 @@ const TournamentSettings = () => {
                 </label>
 
                 <label> Bye Value:
-                    <input type="text" value={pendingByeVal} onChange={(e) => setPendingByeVal(e.target.value)} required />
+                    <select value={pendingByeVal} onChange={(e) => setPendingByeVal(Number(e.target.value))} required>
+                        <option value={0}>0</option>
+                        <option value={0.5}>0.5</option>
+                        <option value={1}>1</option>
+                    </select>
                 </label>
 
                 <label> Tie Break:
@@ -148,8 +209,24 @@ const TournamentSettings = () => {
                 </label>
 
                 <button type="submit">Save Changes</button>
+                
+            </form> 
+            <button onClick={openModalDelConf}>Delete</button>
 
-            </form>
+            <div>
+                <button>Standings</button>
+                <button onClick={() => navigate(`/tournament/${tournamentId}/players`)}>Players</button>
+                <button>Rounds</button>
+                <button onClick={() => navigate(`/tournament/${tournamentId}/settings`)}>Settings</button>
+            </div>
+
+            <Modal isOpen={isModalOpenDelConf} onClose={closeModalDelConf} title="Delete Confirmation" errorDisplay={error}>
+                <h3>Are you sure you want to delete this tournament?</h3>
+                <p>All the tournament data will be permanently lost.</p>
+                <button onClick={deleteTournament}>Confirm</button>
+                <button onClick={closeModalDelConf}>Cancel</button>  
+            </Modal>
+
         </div>
     );
 };
