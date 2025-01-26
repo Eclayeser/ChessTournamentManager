@@ -1,4 +1,4 @@
-// Import React lib and react-router-dom library components
+// Import necessary libraries and hooks
 import React, { useEffect, useState } from "react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 
@@ -8,62 +8,62 @@ function Layout() {
     //variable
     const [loggedIn, setLoggedIn] = useState(false);
 
+    //react-router-dom hooks
     const location = useLocation();
-
     const navigate = useNavigate();
+
     //function that navigates to login page
-    const clickToLogin = () => {
-        navigate("/login");
-    }
+    const goToLogin = () => {navigate("/login")};
 
-    const clickToDashboard = () => {
-        navigate("/dashboard");
-    }
+    const goToDashboard = () => {navigate("/dashboard")};
 
-    const clickToHome = () => {
-        navigate("/");
-    }
+    const goToHome = () => {navigate("/")};
  
-    const clickToAccount = () => {
-        navigate("/account");
-    }
+    const goToAccount = () => {navigate("/account")};
 
-
+    //change loggedIn state based on sessionID presence, triggered by useEffect
     useEffect(() => {
         if (localStorage.getItem("sessionID")) {
             setLoggedIn(true);
         } else {
             setLoggedIn(false);
-        }
+        };
     }, [location]);
 
-  //Display contents
+  
+    //Display contents
   return (
     <div>
+        {/*Header*/}
         <header>
-            {/*Header*/}
+            
             <div>
                 {/*Places Logo image*/}
                 <img src={require('../images/test_logo.png')} alt="Logo"/>
            </div>
+
            <div>
-                {/*Places Log In button*/}
+                {/* Display navigation buttons based on loggedIn state */}
                 {loggedIn ? (
                     <div>
-                        <button onClick={clickToDashboard}>My Tournaments</button>
-                        <button onClick={clickToAccount}>My Account</button>
-                        <button onClick={clickToHome}>Home</button>
+                        <button onClick={goToDashboard}>My Tournaments</button>
+                        <button onClick={goToAccount}>My Account</button>
+                        <button onClick={goToHome}>Home</button>
                     </div>
                 ) : (
-                    <button onClick={clickToLogin}>Log In</button>
+                    <button onClick={goToLogin}>Log In</button>
                 )}
                 <hr></hr>
            </div>
+
         </header>
+
         {/*Wrapped around*/}
         <main><Outlet /></main>
+
+        {/*Footer*/}
         <footer>
-            {/*Footer*/}
+
             <div>
                 <hr></hr>
                 {/*Places Logo image*/}
@@ -74,13 +74,14 @@ function Layout() {
                 {/*Contant Us Email*/}
                 <a href="mailto:mark.tarnavskyy@gmail.com">Contact Us</a>
                 {/*Try Service button - to be enabled later*/}
-                <button onClick={clickToDashboard}>Try Service</button>
+                <button onClick={goToLogin}>Try Service</button>
            </div>
 
            <div>
                 {/*Other Information - to be added later*/}
                 <p>*to be filled later*</p>
            </div>
+           
         </footer>   
     </div>
   );

@@ -1,9 +1,6 @@
-//Import React lib and react-router-dom library components
+// Import necessary libraries and hooks
 import React, { useState, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
-
-import Layout from "./Layout";
-
+import { useNavigate, Link, useLocation } from "react-router-dom";
 
 //Functional component
 const LoginUser = () => {
@@ -12,18 +9,20 @@ const LoginUser = () => {
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
 
+    //react-router-dom hooks
     const navigate = useNavigate();
+    const location = useLocation();
 
-    //event-handling function that is triggered by form
-    const onSubmitForm = async e => {
+    //event-handling function, to authenticate a user, triggered by form
+    const authenticate = async e => {
         e.preventDefault();
         
-        //Send request to server to login the user//
         try {
+
             //object to be sent to server
             const body = { givenUsername: username, givenPassword: password };
 
-            //fetch request to server
+            //send request to server
             const response = await fetch("http://localhost:5000/login", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -33,16 +32,17 @@ const LoginUser = () => {
             //response from server
             const server_resObject = await response.json();
 
-            // if userFound == True -> go to the dashboard, else -> set error value to display
-            if (server_resObject.found === true) {
-                //store sessionID in local storage
+            // if user was authenticated -> go to the dashboard and add a session, else -> set error value to display
+            if (server_resObject.success === true) {
+
                 const sessionID = server_resObject.session;
                 localStorage.setItem("sessionID", sessionID);
 
                 navigate("/dashboard");
+
             } else {
                 setError(server_resObject.message);
-            }
+            };
 
         //catch any errors
         } catch (err) {
@@ -50,16 +50,17 @@ const LoginUser = () => {
         }
     };
 
+    //redirect to dashboard if sessionID is present, and display global message if present, triggered by useEffect
     useEffect(() => {
         if (localStorage.getItem("sessionID")) {
             navigate("/dashboard");       
-        }
+        };
 
         if (localStorage.getItem("globalMessage")) {
             setError(localStorage.getItem("globalMessage"));
             localStorage.removeItem("globalMessage");       
-        }
-    }, []);
+        };
+    }, [location]);
 
     
     //Display contents
@@ -68,14 +69,18 @@ const LoginUser = () => {
             <h1>Log In to ChessManager</h1>
             
             {/* Dynamic Error Message */}
-            <p style={{ color: "red" }}>{error}</p>
+            {error && <p style={{color: "red"}}>{error}</p>}
+            
+            {/* Form to log in */}
+            <form onSubmit={authenticate}>
 
-            <form onSubmit={onSubmitForm}>
                 {/* Input Fields */}
                 <label>Username: <input type="text" value={username} onChange={e => setUsername(e.target.value)} required/></label>
                 <label>Password: <input type="password" value={password} onChange={e => setPassword(e.target.value)} required/></label>
                 <button type="submit">Log In</button>
+
             </form>
+
             {/* Links to home and signup pages */}
             <p>Back to <Link to="/">Home Page</Link></p>
             <p>Create new <Link to="/signup">Account</Link></p>

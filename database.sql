@@ -78,7 +78,7 @@ CREATE TABLE players(
 
 --insert data into entity <players>
 INSERT INTO players (name, rating, email, club, add_points)
-VALUES ('Nazar', 4000, 'naz@k.com', 'Bishops', 3.5);
+VALUES ('Nazar4', 4000, 'naz@k.com', 'Bishops', 3.5);
 --Boundary Data: rating (4000)
 
 --select all rows from entity <players>
@@ -105,10 +105,12 @@ CREATE TABLE entries(
 
 --insert data into entity <entries>
 INSERT INTO entries (tournament_id, player_id, score, predefined, eliminated)
-VALUES (8, 1, '{"colour": "W", "result": 0.5, "opponent_id": 0}', NULL, FALSE);
+VALUES (7, 4, '{"colour": "W", "result": 0.5, "opponent_id": 0}', NULL, FALSE);
 
 
 -------------------------------------------------------------------------------------------------------------------------
+
+"SELECT players.* FROM players JOIN entries ON players.player_id = entries.player_id WHERE entries.tournament_id = $1"
 
 --joint selection from entities <tournaments>, <players> and <entries>
 SELECT tournaments.name, players.name, players.rating, entries.score
