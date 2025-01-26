@@ -52,7 +52,7 @@ const cleanUpSessions = () => {
     console.log(sessions);
 };
 
-setInterval(cleanUpSessions, 0.1 * 60 * 1000); // 6 seconds
+setInterval(cleanUpSessions, 0.5 * 60 * 1000); // 30 seconds
 
 //-----------------------------------------------------------------------
 
@@ -68,6 +68,13 @@ const emailConstraints = /^[a-zA-Z0-9\-.@+]{1,50}$/;
 
 //tournaments: name, type, tie_break, num_rounds, max_players, hide_rating
 const tournamentNameConstraints = /^[a-zA-Z_0-9\- ]{1,50}$/;
+
+
+//players: name, rating, club, email, add_points
+const playerNameConstraints = /^[a-zA-Z\- ]{1,50}$/;
+const clubConstraints = /^[a-zA-Z0-9\- ]{1,50}$/;
+const playerEmailConstraints = /^[a-zA-Z0-9_.@]{1,50}$/;
+
 
 //ROUTES//
 
@@ -342,17 +349,35 @@ app.get("/account", async (req, res) => {
 });
 
 app.post("/logout", async (req, res) => {
+
+    const resObject = {
+        found: false,
+        success: false,
+        message: ""
+    };
     try{
         const sessionID = req.headers["session-id"];
+
+        if (!sessionID || !sessions[sessionID]) {
+            resObject.message = "Session has expired";
+            return res.status(401).json(resObject);
+        }
+        resObject.found = true;
+
         delete sessions[sessionID];
-        return res.json({success: true, message: "Logged out"});
+
+        resObject.success = true;
+        resObject.message = "Logged out";
+        return res.json(resObject);
+
+
+
     } catch (err) {
         console.error(err.message);
-        return res.json({success: false, message: "Server Error"});
     }  
 });
 
-app.put("/changePersonalDetails", async (req, res) => {
+app.put("/update-user-details", async (req, res) => {
     try {
         //passed variables
         const { email, surname, firstName } = req.body;
@@ -407,7 +432,7 @@ app.put("/changePersonalDetails", async (req, res) => {
     }
 })
 
-app.put("/changePassword", async (req, res) => {
+app.put("/update-password", async (req, res) => {
     try {
         //passed variables
         const { password, newPassword } = req.body;
@@ -471,7 +496,7 @@ app.put("/changePassword", async (req, res) => {
     }
 });
 
-app.delete("/deleteAccount", async (req, res) => {
+app.delete("/delete-user", async (req, res) => {
     try {
         //returning object
         const resObject = {
@@ -770,11 +795,6 @@ app.post("/tournament/:id/create-player", async (req, res) => {
         //get the userID from the session
         req.userID = sessions[sessionID].userID;
 
-        //validation constraints
-        const nameConstraints = /^[a-zA-Z\- ]{1,50}$/;
-        const clubConstraints = /^[a-zA-Z0-9\- ]{1,50}$/;
-        const emailConstraints = /^[a-zA-Z0-9_.@]{1,50}$/;
-
         //check if empty or null
         if (!name || !email) {
             resObject.message = "Data field cannot be left empty ";
@@ -795,7 +815,7 @@ app.post("/tournament/:id/create-player", async (req, res) => {
             resObject.message = "Rating must be an integer between 0 and 4000";
             return res.json(resObject);
         }
-        if ((!nameConstraints.test(name))) {
+        if ((!playerNameConstraints.test(name))) {
             resObject.message = "Name exceeds range limit or contains inappropriate characters";
             return res.json(resObject);
         }
@@ -803,7 +823,7 @@ app.post("/tournament/:id/create-player", async (req, res) => {
             resObject.message = "Club exceeds range limit or contains inappropriate characters";
             return res.json(resObject);
         }
-        if ((!emailConstraints.test(email))) {
+        if ((!playerEmailConstraints.test(email))) {
             resObject.message = "Email exceeds range limit or contains inappropriate characters";
             return res.json(resObject);
         }
@@ -898,18 +918,12 @@ app.put("/edit-player-details", async (req, res) => {
         const sessionID = req.headers["session-id"];
 
         let { player_id, name, rating, club, add_points } = req.body;
-        console.log(player_id, name, rating, club, add_points);
 
         if (!sessionID || !sessions[sessionID]) {
             resObject.message = "Session has expired";
             return res.status(401).json(resObject);
         }
         resObject.found = true;
-
-        //validation constraints
-        const nameConstraints = /^[a-zA-Z\- ]{1,50}$/;
-        const clubConstraints = /^[a-zA-Z0-9\- ]{1,50}$/;
-
 
         //check if empty or null
         if (!name) {
@@ -931,7 +945,7 @@ app.put("/edit-player-details", async (req, res) => {
             resObject.message = "Rating must be an integer between 0 and 4000";
             return res.json(resObject);
         }
-        if ((!nameConstraints.test(name))) {
+        if ((!playerNameConstraints.test(name))) {
             resObject.message = "Name exceeds range limit or contains inappropriate characters";
             return res.json(resObject);
         }
@@ -976,18 +990,65 @@ app.delete("/tournament/:id/remove-player", async (req, res) => {
 
         const { player_id } = req.body;
 
-        console.log(player_id);
-
         if (!sessionID || !sessions[sessionID]) {
             resObject.message = "Session has expired";
             return res.status(401).json(resObject);
         }
         resObject.found = true;
 
+        //check if empty or null, and if id is valid
+        if (!player_id || !Number.isInteger(player_id)) {
+            resObject.message = "Invalid player id";
+            return res.json(resObject);
+        }
+
+        //check if player exists
+        const findPlayer = await pool.query(
+            "SELECT * FROM players WHERE player_id = $1;",
+            [player_id]
+        );
+
+        if (findPlayer.rows.length === 0) {
+            resObject.message = "Invalid player id";
+            return res.json(resObject);
+        };
+
+        //delete player from the tournament
         const deleteEntry = await pool.query(
             "DELETE FROM entries WHERE player_id = $1 AND tournament_id = $2;",
             [player_id, id]
         );
+
+        //delete forbidden pairs that contain this player
+        const originalForbidden = await pool.query(
+            "SELECT forbidden FROM tournaments WHERE tournament_id = $1",
+            [id]
+        );
+
+        if (originalForbidden.rows[0] > 0) {
+            const forbidden_pairs = originalForbidden.rows[0].forbidden;
+
+            let flag = false;
+            index = 0;
+            while (index < forbidden_pairs.length) {
+                if (forbidden_pairs[index][0] === player_id || forbidden_pairs[index][1] === player_id) {
+                    forbidden_pairs.splice(index, 1);
+                    index = 0;
+                    flag = true;
+                } else {
+                    index++;
+                };
+            };
+
+            if (flag) {
+                const updatedForbidden = await pool.query(
+                    "UPDATE tournaments SET forbidden = $1 WHERE tournament_id = $2",
+                    [forbidden_pairs, id]
+                );
+            };
+        };
+        
+
 
         resObject.success = true;
         resObject.message = "Player has been removed";
@@ -1021,10 +1082,9 @@ app.post("/tournament/:id/add-existing-player", async (req, res) => {
         }
         resObject.found = true;
 
-        //validate email
-        const emailConstraints = /^[a-zA-Z0-9_.@]{1,50}$/;
 
-        if (!email || !emailConstraints.test(email)) {
+        //check if empty or null, and if email is valid
+        if (!email || !playerEmailConstraints.test(email)) {
             resObject.message = "Invalid email";
             return res.json(resObject);
         }
@@ -1066,3 +1126,308 @@ app.post("/tournament/:id/add-existing-player", async (req, res) => {
         console.error(err.message);
     }
 });
+
+app.get("/tournament/:id/forbidden-pairs", async (req, res) => {
+    try {
+        //returning object
+        const resObject = {
+            success: false,
+            found: false,
+            message: "",
+            forbidden: null
+        };
+
+        //get the id from the URL
+        const { id } = req.params;
+
+        //verify that the request is authorised
+        const sessionID = req.headers["session-id"];
+        if (!sessionID || !sessions[sessionID]) {
+            resObject.message = "Session has expired";
+            return res.status(401).json(resObject);
+        }
+        resObject.found = true;
+
+        //if user is authorised, get the forbidden pairs
+        const forbidden = await pool.query(
+            "SELECT forbidden FROM tournaments WHERE tournament_id = $1",
+            [id]
+        );
+        const forbidden_pairs_ids = forbidden.rows[0].forbidden;
+        //console.log(forbidden_pairs_ids);
+        
+        
+        const forbidden_pairs = [];
+
+        for (const index in forbidden_pairs_ids) {
+            const forbidden_player_1 = await pool.query(
+                "SELECT name FROM players WHERE player_id = $1",
+                [forbidden_pairs_ids[index][0]]
+            );
+            //console.log(forbidden_player_1);
+            const forbidden_player_2 = await pool.query(
+                "SELECT name FROM players WHERE player_id = $1",
+                [forbidden_pairs_ids[index][1]]
+            );
+            //console.log(forbidden_player_2);
+            forbidden_pairs.push({
+                player1_name: forbidden_player_1.rows[0].name, 
+                player2_name: forbidden_player_2.rows[0].name,
+                player1_id: forbidden_pairs_ids[index][0],
+                player2_id: forbidden_pairs_ids[index][1]
+            });
+        }
+
+ 
+        resObject.forbidden_pairs = forbidden_pairs;
+        resObject.success = true;
+        resObject.message = "Forbidden pairs have been found";
+        return res.json(resObject);
+
+    //catch any errors
+    } catch (err) {
+        console.error(err.message);
+    }
+});
+
+app.put("/tournament/:id/remove-forbidden-pair", async (req, res) => {
+    try {
+        //returning object
+        const resObject = {
+            found: false,
+            success: false,
+            message: ""
+        };
+
+        //get the id from the URL
+        const { id } = req.params;
+
+        
+
+        const { pair_id } = req.body;
+
+        //get the sessionID from the headers
+        const sessionID = req.headers["session-id"];
+        if (!sessionID || !sessions[sessionID]) {
+            resObject.message = "Session has expired";
+            return res.status(401).json(resObject);
+        }
+        resObject.found = true;
+
+        const originalForbidden = await pool.query(
+            "SELECT forbidden FROM tournaments WHERE tournament_id = $1",
+            [id]
+        );
+        const forbidden_pairs = originalForbidden.rows[0].forbidden;
+
+        //check if the pair is valid
+        if (pair_id < 0 || pair_id >= forbidden_pairs.length || !Number.isInteger(pair_id)) {
+            resObject.message = "Invalid pair id";
+            return res.json(resObject);
+        }
+
+        //remove the pair from the 2d array
+        forbidden_pairs.splice(pair_id, 1);
+
+        //update the forbidden pairs
+        const updatedForbidden = await pool.query(
+            "UPDATE tournaments SET forbidden = $1 WHERE tournament_id = $2",
+            [forbidden_pairs, id]
+        );
+          
+        resObject.success = true;
+        resObject.message = "Forbidden pair has been removed";
+        resObject.forbidden_pairs = forbidden_pairs;
+        return res.json(resObject);
+
+    } catch (err) {
+        console.error(err.message);
+    }
+});
+
+app.put("/tournament/:id/add-forbidden-pair", async (req, res) => {
+    try {
+        //returning object
+        const resObject = {
+            found: false,
+            success: false,
+            message: ""
+        };
+
+        //get the id from the URL
+        const { id } = req.params;
+
+        const { player1_id, player2_id } = req.body;
+
+        //get the sessionID from the headers
+        const sessionID = req.headers["session-id"];
+        if (!sessionID || !sessions[sessionID]) {
+            resObject.message = "Session has expired";
+            return res.status(401).json(resObject);
+        };
+        resObject.found = true;
+
+        //check if empty or null
+        if (!player1_id || !player2_id) {
+            resObject.message = "No ids given";
+            return res.json(resObject);
+        };
+
+        //check if the players are the same
+        if (player1_id === player2_id) {
+            resObject.message = "Players cannot be the same";
+            return res.json(resObject);
+        };
+
+        //check if the ids are integers
+        if (!Number.isInteger(player1_id) || !Number.isInteger(player2_id)) {
+            resObject.message = "IDs must be integers";
+            return res.json(resObject);
+        };
+
+        //check if players exist
+        const player1 = await pool.query(
+            "SELECT * FROM players WHERE player_id = $1",
+            [player1_id]
+        );
+        const player2 = await pool.query(
+            "SELECT * FROM players WHERE player_id = $1",
+            [player2_id]
+        );
+
+        if (player1.rows.length === 0 || player2.rows.length === 0) {
+            resObject.message = "One or both players do not exist";
+            return res.json(resObject);
+        }
+
+        //get the forbidden pairs
+        const originalForbidden = await pool.query(
+            "SELECT forbidden FROM tournaments WHERE tournament_id = $1",
+            [id]
+        );
+        const forbidden_pairs = originalForbidden.rows[0].forbidden;
+
+        //check if the pair already exists
+        for (const index in forbidden_pairs) {
+            if (forbidden_pairs[index][0] === player1_id && forbidden_pairs[index][1] === player2_id) {
+                resObject.message = "Pair already exists";
+                return res.json(resObject);
+            }
+            if (forbidden_pairs[index][0] === player2_id && forbidden_pairs[index][1] === player1_id) {
+                resObject.message = "Pair already exists";
+                return res.json(resObject);
+            }
+        }
+
+        //add the pair to the 2d array
+        forbidden_pairs.push([player1_id, player2_id]);
+
+        //update the forbidden pairs
+        const updatedForbidden = await pool.query(
+            "UPDATE tournaments SET forbidden = $1 WHERE tournament_id = $2",
+            [forbidden_pairs, id]
+        );
+          
+        resObject.success = true;
+        resObject.message = "Forbidden pair has been added";
+        resObject.forbidden_pairs = forbidden_pairs;
+        return res.json(resObject);
+
+    } catch (err) {
+        console.error(err.message);
+    }
+});
+
+//TournamentStandings.js
+app.get("/tournament/:id/standings", async (req, res) => {
+    try {
+        //returning object
+        const resObject = {
+            success: false,
+            found: false,
+            message: "",
+            standings: null
+            //standings: [{player_name: "John", player_rating: 1000, points: 3, rounds_result: ["W", "L"], tiebreak_points: 10}, ]
+        };
+
+        //get the id from the URL
+        const { id } = req.params;
+
+        //verify that the request is authorised
+        const sessionID = req.headers["session-id"];
+        if (!sessionID || !sessions[sessionID]) {
+            resObject.message = "Session has expired";
+            return res.status(401).json(resObject);
+        }
+        resObject.found = true;
+
+        console.log("here");
+
+        //Produce standings
+
+    //catch any errors
+    } catch (err) {
+        console.error(err.message);
+    }
+});
+
+async function produceStandings(tournament_id) {
+    try {
+        // Retrieve player data
+        const playersResult = await pool.query(
+            `SELECT players.player_id, players.name, players.rating, players.add_points
+            FROM players
+            JOIN entries ON players.player_id = entries.player_id
+            WHERE entries.tournament_id = $1`, 
+            [tournament_id]
+        );
+
+        const players_data = playersResult.rows;
+        
+        //list of ids
+        const players_ids = players_data.map(player => player.player_id);
+
+        //find out number of rounds
+        const resultFromScore = await pool.query(
+            `SELECT score FROM entries WHERE tournament_id = $1 AND player_id = $2`,
+            [tournament_id, players_ids[0]]
+        );
+        const score = resultFromScore.rows[0].score;
+
+        console.log(score);
+        let no_more_rounds = false
+        let round_count = 1;
+        while (!no_more_rounds) {
+            try{
+                index = `round${round_count}`;
+                if (Number.isInteger(score.index.result)) {
+                    round_count++;
+                }
+                console.log(index);
+
+            } catch (err){
+                no_more_rounds = true;
+            };
+        };
+
+        
+        console.log(round_count);
+
+    } catch (err) {
+        console.error(err.message);
+    }
+}
+
+produceStandings(15);
+
+        /* iterate through ids to fetch total points
+        const total_points = [];
+        for (const player_id of players_ids) {
+            console.log(player_id);
+            const pointsResult = await pool.query(
+                `SELECT (COALESCE((score->'round1'->>'result')::float, 0) + COALESCE((score->'round2'->>'result')::float, 0)) AS total_points 
+                FROM entries WHERE entry_id = 34;`,
+                [player_id, tournament_id]
+            );
+            total_points.push(pointsResult.rows);
+        }*/

@@ -12,6 +12,7 @@ import MyAccount from "./components/Account";
 import TournamentSettings from "./components/TournamentSettings";
 import CreateTournamentDisplay from "./components/CreateTournament";
 import DisplayPlayers from "./components/TournamentPlayers";
+import DisplayStandings from "./components/TournamentStandings";
 
 // Main App Component
 function App() {
@@ -58,6 +59,7 @@ return (
         <Route path="/create-tournament" element={<CreateTournamentDisplay />} />
         <Route path="/tournament/:tournamentId/settings" element={<TournamentSettings />} />
         <Route path="/tournament/:tournamentId/players" element={<DisplayPlayers />} />
+        <Route path="/tournament/:tournamentId/standings" element={<DisplayStandings />} />
         <Route path="/account" element={<MyAccount />} />
       </Route>
     </Routes>

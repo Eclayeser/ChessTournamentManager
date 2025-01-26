@@ -59,8 +59,8 @@ VALUES (2, 'TestTournament_8', 'test_type', 7, 10, 1, 'test_tie_break', TRUE, '{
 
 --update data under hide_ratinh column where tournament_id = 1
 UPDATE tournaments
-SET hide_rating = 'Hide'
-WHERE tournament_id = 1;
+SET forbidden = ARRAY[[1, 2], [2, 3], [5, 4]]
+WHERE tournament_id = 7;
 
 -------------------------------------------------------------------------------------------------------------------------
 
@@ -105,7 +105,7 @@ CREATE TABLE entries(
 
 --insert data into entity <entries>
 INSERT INTO entries (tournament_id, player_id, score, predefined, eliminated)
-VALUES (7, 4, '{"colour": "W", "result": 0.5, "opponent_id": 0}', NULL, FALSE);
+VALUES (7, 4, '{"round1": {"colour": "W", "result": 0.5, "opponent_id": 0}, "round2": {"colour": "W", "result": 0.5, "opponent_id": 0}}', NULL, FALSE);
 
 
 -------------------------------------------------------------------------------------------------------------------------

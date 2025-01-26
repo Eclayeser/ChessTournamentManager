@@ -136,9 +136,17 @@ function MyAccount() {
             if (server_resObject.success === true) {
                 localStorage.removeItem("sessionID");
                 navigate("/login");
+
             } else {
-                console.error("Error logging out");
-            }
+
+                if (server_resObject.found === false) {
+                    localStorage.removeItem("sessionID");
+                    localStorage.setItem("globalMessage", server_resObject.message);
+                    navigate("/login");
+                } else {
+                    console.error("Error logging out");
+                };
+            };
         } catch (err) {
             console.error(err.message);
         }
@@ -150,7 +158,7 @@ function MyAccount() {
         try {
             const body = { email: email, surname: surname, firstName: firstName};
             //fetch request to server
-            const response = await fetch("http://localhost:5000/changePersonalDetails", {
+            const response = await fetch("http://localhost:5000/update-user-details", {
                 method: "PUT",
                 headers: { "Content-Type": "application/json", "Session-Id": localStorage.getItem("sessionID") },
                 body: JSON.stringify(body)
@@ -196,7 +204,7 @@ function MyAccount() {
         try {
             const body = { password: password, newPassword: newPassword};
             //fetch request to server
-            const response = await fetch("http://localhost:5000/changePassword", {
+            const response = await fetch("http://localhost:5000/update-password", {
                 method: "PUT",
                 headers: { "Content-Type": "application/json", "Session-Id": localStorage.getItem("sessionID") },
                 body: JSON.stringify(body)
@@ -236,7 +244,7 @@ function MyAccount() {
         setError("");
         try {
             //fetch request to server
-            const response = await fetch("http://localhost:5000/deleteAccount", {
+            const response = await fetch("http://localhost:5000/delete-user", {
                 method: "DELETE",
                 headers: { "Content-Type": "application/json", "Session-Id": localStorage.getItem("sessionID") },
             });

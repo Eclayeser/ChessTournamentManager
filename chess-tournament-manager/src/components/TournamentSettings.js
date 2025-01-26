@@ -94,8 +94,6 @@ const TournamentSettings = () => {
 
     const updateTournamentDetails = async e => {
         e.preventDefault();
-        setError("");
-        setSuccessMessage("");
 
         try {
             //get sessionID from localStorage
@@ -187,15 +185,22 @@ const TournamentSettings = () => {
 
     //Use useEffect to fetch tournament details when the component mounts
     useEffect(() => {
+        setError("");
+        setSuccessMessage("");
         requestTournamentDetails();
     }, [tournamentId]);
 
+    //Display component
     return (
         <div>
             <h1>Tournament Settings</h1>
+
             {error && <p style={{color:"red"}}>{error}</p>}
             {successMessage && <p style={{color:"green"}}>{successMessage}</p>}
+
+            {/*Form to update tournament details*/}
             <form onSubmit={updateTournamentDetails} style={{ display: "flex", flexDirection: "column", maxWidth: "400px", margin: "15px" }}>
+
                 <label> Tournament Name:
                     <input type="text" value={name} onChange={(e) => setName(e.target.value)} required />
                 </label>
@@ -235,7 +240,7 @@ const TournamentSettings = () => {
 
             {/*Navigation buttons*/}
             <div>
-                <button>Standings</button>
+                <button onClick={() => navigate(`/tournament/${tournamentId}/standings`)}>Standings</button>
                 <button onClick={() => navigate(`/tournament/${tournamentId}/players`)}>Players</button>
                 <button>Rounds</button>
                 <button onClick={() => navigate(`/tournament/${tournamentId}/settings`)}>Settings</button>
