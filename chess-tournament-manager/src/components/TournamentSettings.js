@@ -17,8 +17,8 @@ const TournamentSettings = () => {
     const [name, setName] = useState("");
     const [type, setType] = useState("");
     const [tieBreak, setTieBreak] = useState("");
-    const [numRounds, setNumRounds] = useState(0);
-    const [maxPlayers, setMaxPlayers] = useState(0);
+    const [maxRounds, setMaxRounds] = useState(0);
+    const [maxParticipants, setMaxParticipants] = useState(0);
     const [hideRating, setHideRating] = useState("");
     const [byeVal, setByeVal] = useState("");
 
@@ -55,7 +55,7 @@ const TournamentSettings = () => {
             const sessionID = localStorage.getItem("sessionID");
 
             //send request to server
-            const response = await fetch(`http://localhost:5000/tournament/${tournamentId}/details`, {
+            const response = await fetch(`http://localhost:5000/tournament/${tournamentId}/fetch-details`, {
                 method: "GET",
                 headers: { "Content-Type": "application/json", "Session-Id": sessionID },
             });
@@ -71,8 +71,8 @@ const TournamentSettings = () => {
                 setType(server_resObject.details.type);
                 setTieBreak(server_resObject.details.tie_break);
                 setName(server_resObject.details.name);
-                setNumRounds(server_resObject.details.num_rounds);
-                setMaxPlayers(server_resObject.details.max_players);
+                setMaxRounds(server_resObject.details.max_rounds);
+                setMaxParticipants(server_resObject.details.max_participants);
                 setHideRating(server_resObject.details.hide_rating);
                 setByeVal(server_resObject.details.bye_value);
             } else {
@@ -94,6 +94,8 @@ const TournamentSettings = () => {
 
     const updateTournamentDetails = async e => {
         e.preventDefault();
+        setError("");
+        setSuccessMessage("");
 
         try {
             //get sessionID from localStorage
@@ -102,8 +104,8 @@ const TournamentSettings = () => {
             //object to be sent to server
             const body = {
                         name: name,
-                        num_rounds: numRounds,
-                        max_players: maxPlayers,
+                        max_rounds: maxRounds,
+                        max_participants: maxParticipants,
                         bye_value: byeVal,
                         hide_rating: hideRating
             }; 
@@ -206,11 +208,11 @@ const TournamentSettings = () => {
                 </label>
 
                 <label> Number of Rounds:
-                    <input type="number" value={numRounds} onChange={(e) => setNumRounds(Number(e.target.value))} min={1} max={50} required />
+                    <input type="number" value={maxRounds} onChange={(e) => setMaxRounds(Number(e.target.value))} min={1} max={50} required />
                 </label>
 
                 <label> Maximum Players:
-                    <input type="number" value={maxPlayers} onChange={(e) => setMaxPlayers(Number(e.target.value))} min={1} max={1000} required />
+                    <input type="number" value={maxParticipants} onChange={(e) => setMaxParticipants(Number(e.target.value))} min={1} max={1000} required />
                 </label>
 
                 <label> Tournament Type:

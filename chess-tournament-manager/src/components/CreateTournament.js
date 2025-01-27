@@ -8,19 +8,27 @@ const CreateTournamentDisplay = () => {
     const [name, setName] = useState("");
     const [type, setType] = useState("Swiss System");
     const [tieBreak, setTieBreak] = useState("Buchholz Total");
-    const [rounds, setRounds] = useState(0);
-    const [players, setPlayers] = useState(0);
+    const [maxRounds, setMaxRounds] = useState(0);
+    const [maxParticipants, setMaxParticipants] = useState(0);
     const [hideRating, setHideRating] = useState(false);
     const [byeVal, setByeVal] = useState(0);
 
     const [error, setError] = useState("");
 
-    
+    //react-router-dom hook
     const navigate = useNavigate();
 
+    //create tournament function
     const createTournament = async (e) => {
         e.preventDefault();
         setError("");
+
+        let calculatedMaxRounds = maxRounds;
+
+        if (type === "Knockout") {
+            //calculate number of rounds for knockout
+            calculatedMaxRounds = Math.ceil(Math.log2(maxParticipants));
+        };
 
         try {
             const sessionID = localStorage.getItem("sessionID");
@@ -29,13 +37,13 @@ const CreateTournamentDisplay = () => {
                 name: name,
                 type: type,
                 tie_break: tieBreak,
-                num_rounds: rounds,
-                max_players: players,
+                max_rounds: calculatedMaxRounds,
+                max_participants: maxParticipants,
                 hide_rating: hideRating,
                 bye_value: byeVal
             }
             //fetch request to server
-            const response = await fetch(`http://localhost:5000/tournament/create`, {
+            const response = await fetch(`http://localhost:5000/create-tournament`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json", "Session-Id": sessionID },
                 body: JSON.stringify(body),
@@ -69,18 +77,25 @@ const CreateTournamentDisplay = () => {
     return (
         <div>
             <h1>Create Tournament</h1>
+
+
             {error && <p className="error">{error}</p>}
+
+
             <form onSubmit={createTournament} style={{ display: "flex", flexDirection: "column", maxWidth: "400px", margin: "15px" }}>
                 <label> Tournament Name:
                     <input type="text" value={name} onChange={(e) => setName(e.target.value)} required />
                 </label>
 
-                <label> Number of Rounds:
-                    <input type="number" value={rounds} onChange={(e) => setRounds(Number(e.target.value))} min={1} max={50} required />
+                <label> Maximum number of Rounds:
+                    {type === "Knockout" ? 
+                    <input type="text" value={"*disabled for Knockout*"} disabled /> 
+                    : 
+                    <input type="number" value={maxRounds} onChange={(e) => setMaxRounds(Number(e.target.value))} min={1} max={50} required />}
                 </label>
 
                 <label> Maximum Players:
-                    <input type="number" value={players} onChange={(e) => setPlayers(Number(e.target.value))} min={1} max={1000} required />
+                    <input type="number" value={maxParticipants} onChange={(e) => setMaxParticipants(Number(e.target.value))} min={1} max={1000} required />
                 </label>
 
                 <label> Tournament Type:

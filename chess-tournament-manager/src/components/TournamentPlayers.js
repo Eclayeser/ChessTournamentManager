@@ -10,35 +10,40 @@ import Modal from "./ModalTemplate";
 //Functional component
 const DisplayPlayers = () => {
 
-
     //variables
-    const [players, setPlayers] = useState([]);
- 
+    const [listPlayersTable, setListPlayersTable] = useState([]); 
+
+    const [tournamentDetails, setTournamentDetails] = useState({}); 
+
     const [tournamentName, setTournamentName] = useState("");
 
-    const [forbiddenPairs, setForbiddenPairs] = useState([]);
+    //const [forbiddenPairs, setForbiddenPairs] = useState([]);
 
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [club, setClub] = useState("");
     const [rating, setRating] = useState(0);
     const [addPoints, setAddPoints] = useState(0);
+    const [eliminated, setEliminated] = useState(false);
 
     const [existingEmail, setExistingEmail] = useState("");
 
     const [editPlayerId, setEditPlayerId] = useState(null);
 
-    const [error, setError] = useState("");
-    const [successMessage, setSuccessMessage] = useState("");
+
 
     const [player1, setPlayer1] = useState("");
     const [player2, setPlayer2] = useState("");
 
-    
+    const [error, setError] = useState("");
+    const [successMessage, setSuccessMessage] = useState("");
+
     const { tournamentId } = useParams();
 
     //react-router-dom hooks
     const navigate = useNavigate();
+
+    
 
     //Add Player Modal
     const [isModalOpenAddPlayer, setIsModalOpenAddPlayer] = useState(false);
@@ -57,6 +62,7 @@ const DisplayPlayers = () => {
         setError("");
     };
 
+    
     //Edit Player Modal
     const [isModalOpenEditPlayer, setIsModalOpenEditPlayer] = useState(false);
 
@@ -73,6 +79,7 @@ const DisplayPlayers = () => {
         setError("");
     };
 
+    
     //Remove Confirmation Modal
     const [isModalOpenRemConf, setIsModalOpenRemConf] = useState(false);
 
@@ -90,6 +97,7 @@ const DisplayPlayers = () => {
         setError("");
     };
 
+    /*
     //Forbidden Pairs Modal
     const [isModalOpenForbPairs, setIsModalOpenForbPairs] = useState(false);
 
@@ -117,22 +125,30 @@ const DisplayPlayers = () => {
         setIsModalOpenAddForbPair(false);
     };
 
-    const emptyPlayerDetails = () => {
-        setName("");
-        setEmail("");
-        setClub("");
-        setRating(0);
-        setAddPoints(0);
-        setExistingEmail("");
-    };
+    
+
+    */
 
     const fillPlayerDetails = (player) => {
         setName(player.name);
         setEmail(player.email);
         setClub(player.club);
         setRating(player.rating);
-        setAddPoints(player.add_points);
+        setAddPoints(player.additional_points);
+        setEliminated(player.eliminated);
     };
+
+    const emptyPlayerDetails = () => {
+        setName("");
+        setEmail("");
+        setClub("");
+        setRating(0);
+        setAddPoints(0);
+        setEliminated(null);
+
+        setExistingEmail("");
+    };
+
 
 
     const fetchPlayers = async () => {
@@ -150,14 +166,13 @@ const DisplayPlayers = () => {
 
             if (server_resObject.success === true) {
 
-                setTournamentName(server_resObject.tournament.name);
-                console.log(server_resObject.players);
+                setTournamentDetails(server_resObject.tournament);
 
                 if (server_resObject.players.length !== 0) {
-                    setPlayers(server_resObject.players);
+                    setListPlayersTable(server_resObject.players);
 
-                    setPlayer1(Number(server_resObject.players[0].player_id));
-                    setPlayer2(Number(server_resObject.players[0].player_id));
+                    //setPlayer1(Number(server_resObject.players[0].player_id));
+                    //setPlayer2(Number(server_resObject.players[0].player_id));
                 };
                 
             } else {
@@ -180,10 +195,17 @@ const DisplayPlayers = () => {
         }
     };
 
+    
     const createNewPlayer = async (e) => {
         e.preventDefault();
         setError("");
         setSuccessMessage("");
+
+        //check if the number of players has reached the maximum
+        if (listPlayersTable.length >= tournamentDetails.max_participants) {
+            setError("The maximum number of players has been reached.");
+            return;
+        }
 
         try {
             //get sessionID from localStorage
@@ -195,7 +217,7 @@ const DisplayPlayers = () => {
                 rating: rating,
                 club: club,
                 email: email,
-                add_points: addPoints
+                additional_points: addPoints
             }
 
             //fetch request to server
@@ -212,6 +234,7 @@ const DisplayPlayers = () => {
                 closeModalAddPlayer();
                 setSuccessMessage(server_resObject.message);
                 fetchPlayers();
+                emptyPlayerDetails();
 
             // if session expired -> remove sessionID and go to login page, else -> set error value
             } else {
@@ -233,8 +256,57 @@ const DisplayPlayers = () => {
         }
     };
 
-    const openAndEditPlayer = async (playerId) => {
-        //fetch player details
+
+    const addExistingPlayer = async () => {
+        setError("");
+        setSuccessMessage("");
+
+        //check if the number of players has reached the maximum
+        if (listPlayersTable.length >= tournamentDetails.max_participants) {
+            setError("The maximum number of players has been reached.");
+            return;
+        }
+
+        try {
+            const sessionID = localStorage.getItem("sessionID");
+
+            const body = { email: existingEmail };
+            //fetch request to server
+            const response = await fetch(`http://localhost:5000/tournament/${tournamentId}/add-existing-player`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "Session-Id": sessionID },
+                body: JSON.stringify(body),
+            });
+            //response from server
+            const server_resObject = await response.json();
+            
+            // if authorised -> set tournament details, else -> set error value and go to login page
+            if (server_resObject.success === true) {
+                setSuccessMessage(server_resObject.message);
+                fetchPlayers();
+                closeModalAddPlayer();
+
+            } else {
+                // create could not happen due to session expiration
+                if (server_resObject.found === false) {
+                    localStorage.removeItem("sessionID");
+                    localStorage.setItem("globalMessage", server_resObject.message);
+                    navigate("/login");
+                }
+                // create failed due to server error
+                else {
+                    setError(server_resObject.message);
+                }
+            }
+
+        //catch any errors
+        } catch (err) {
+            console.error(err.message);
+        }
+    };
+    
+    
+    const selectPlayer = async (playerId) => {
         try {
 
             const sessionID = localStorage.getItem("sessionID");
@@ -242,7 +314,7 @@ const DisplayPlayers = () => {
             const body = { player_id: playerId };
 
             //fetch request to server
-            const response = await fetch(`http://localhost:5000/fetch-player-details`, {
+            const response = await fetch(`http://localhost:5000/tournament/${tournamentId}/fetch-player-details`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json", "Session-Id": sessionID },
                 body: JSON.stringify(body),
@@ -277,6 +349,7 @@ const DisplayPlayers = () => {
         }
     };
 
+    /*
     const editPlayerDetails = async (e) => {
         e.preventDefault();
         setError("");
@@ -323,7 +396,7 @@ const DisplayPlayers = () => {
             console.error(err.message);
         }
     };
-
+    */
 
     const removePlayer = async () => {
         setError("");
@@ -343,12 +416,12 @@ const DisplayPlayers = () => {
             });
             //response from server
             const server_resObject = await response.json();
-            console.log(server_resObject);
             
             // if authorised -> set tournament details, else -> set error value and go to login page
             if (server_resObject.success === true) {
                 fetchPlayers();
                 setIsModalOpenRemConf(false);
+
             } else {
                 // create could not happen due to session expiration
                 if (server_resObject.found === false) {
@@ -369,47 +442,10 @@ const DisplayPlayers = () => {
     };
 
 
-    const addExistingPlayer = async () => {
-        setError("");
-        setSuccessMessage("");
+    
 
-        try {
-            const sessionID = localStorage.getItem("sessionID");
 
-            const body = { email: existingEmail };
-            //fetch request to server
-            const response = await fetch(`http://localhost:5000/tournament/${tournamentId}/add-existing-player`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json", "Session-Id": sessionID },
-                body: JSON.stringify(body),
-            });
-            //response from server
-            const server_resObject = await response.json();
-            
-            // if authorised -> set tournament details, else -> set error value and go to login page
-            if (server_resObject.success === true) {
-                setSuccessMessage(server_resObject.message);
-                fetchPlayers();
-                closeModalAddPlayer();
-            } else {
-                // create could not happen due to session expiration
-                if (server_resObject.found === false) {
-                    localStorage.removeItem("sessionID");
-                    localStorage.setItem("globalMessage", server_resObject.message);
-                    navigate("/login");
-                }
-                // create failed due to server error
-                else {
-                    setError(server_resObject.message);
-                }
-            }
-
-        //catch any errors
-        } catch (err) {
-            console.error(err.message);
-        }
-    };
-
+    /*
     const fetchForbiddenPairs = async () => {
         try {
             const sessionID = localStorage.getItem("sessionID");
@@ -526,6 +562,7 @@ const DisplayPlayers = () => {
         }
     };
 
+    */
     const saveCSV = () => {
         //convert table to csv
         const rows = document.querySelectorAll("table tr");
@@ -552,14 +589,14 @@ const DisplayPlayers = () => {
     //Display the component
     return (
         <div>
-            <h2>{tournamentName}: Players</h2>
+            <h2>{tournamentDetails.name}: Players</h2>
 
             {successMessage && <p style={{color:'green'}}>{successMessage}</p>}
 
             <div>
 
                 <button onClick={openModalAddPlayer}>Add Player</button>
-                <button onClick={openModalForbPairs}>Forbidden Pairs</button>
+                {/*<button onClick={openModalForbPairs}>Forbidden Pairs</button>*/}
 
                 {/*Table of Players*/}
                 <table style={{ border: "1px solid black" }}>
@@ -567,19 +604,21 @@ const DisplayPlayers = () => {
                         <tr>
                             <th>№</th>
                             <th>Name</th>
-                            <th>Rating</th>
-                            <th>Add. Points</th>
+                            {tournamentDetails.hide_rating ? (null):(<th>Rating</th>)}
                             <th>Club</th>
+                            <th>Add. Pts</th>
+                            <th>Eliminated</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {players.map((player, index) => (
-                            <tr key={player.player_id} onClick={() => openAndEditPlayer(player.player_id)}>
+                        {listPlayersTable.map((player, index) => (
+                            <tr key={player.player_id} onClick={() =>selectPlayer(player.player_id)}>
                                 <td>{index + 1}</td>
                                 <td>{player.name}</td>
-                                <td>{player.rating}</td>
-                                <td>{player.add_points}</td>
+                                {tournamentDetails.hide_rating ? (null):(<th>{player.rating}</th>)}
                                 <td>{player.club}</td>
+                                <td>{player.additional_points}</td>
+                                <td>{player.eliminated}</td>
                             </tr>
                         ))}
                     </tbody>
@@ -616,18 +655,21 @@ const DisplayPlayers = () => {
             {/*Edit Player Modal*/}
             <Modal isOpen={isModalOpenEditPlayer} onClose={closeModalEditPlayer} title="Edit Player" errorDisplay={error} successDisplay={successMessage}>
                 
-                <form onSubmit={editPlayerDetails} style={{ display: 'flex', flexDirection: 'column' }}>
+                {/*onSubmit={editPlayerDetails}*/}
+                <form style={{ display: 'flex', flexDirection: 'column' }}>
                     <label>Name: <input type="text" value={name} onChange={(e) => setName(e.target.value)} required /> </label>
                     <label>Email: <input type="email" value={email} readOnly/> </label>
                     <label>Club: <input type="text" value={club} onChange={(e) => setClub(e.target.value)}/> </label>
                     <label>Rating: <input type="number" value={rating} onChange={(e) => setRating(Number(e.target.value))} min={0} max={4000}/> </label>
                     <label>Additional Points: <input type="text" value={addPoints} onChange={(e) => setAddPoints(e.target.value)} min={0}/> </label>
+                    <label>Eliminated: <input type="text" value={eliminated} onChange={(e) => setEliminated(e.target.value)}/> </label>
                     <button type="submit">Save</button> 
                 </form>
                 
                 <button onClick={openModalRemConf}>Remove Player</button>
                    
             </Modal>
+            
 
             {/* Remove Confirmation Pop-up */}
             <Modal isOpen={isModalOpenRemConf} onClose={closeModalRemConf} title="Remove This Player" errorDisplay={error}>
@@ -638,8 +680,21 @@ const DisplayPlayers = () => {
                 <button onClick={closeModalRemConf}>Cancel</button>
 
             </Modal>
+        </div>
 
-            {/* Forbidden Pairs Modal */}
+
+    );
+}
+
+export default DisplayPlayers;
+
+
+
+            
+            
+            /*
+
+            { Forbidden Pairs Modal }
             <Modal isOpen={isModalOpenForbPairs} onClose={closeModalForbPairs} title="Forbidden Pairs">
                 
                 <table>
@@ -667,7 +722,7 @@ const DisplayPlayers = () => {
                 <button onClick={openModalAddForbPair}>Add Pair</button>
             </Modal>
 
-            {/* Add Forbidden Pair Modal */}
+            { Add Forbidden Pair Modal }
             <Modal isOpen={isModalOpenAddForbPair} onClose={closeModalAddForbPair} title="Add a Pair" errorDisplay={error}>
                 
                  <label> Player 1:
@@ -689,11 +744,4 @@ const DisplayPlayers = () => {
                 <button onClick={addForbiddenPair}>Add</button>
 
             </Modal>
-
-        </div>
-
-
-    );
-}
-
-export default DisplayPlayers;
+            */
