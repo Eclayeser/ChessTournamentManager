@@ -71,9 +71,11 @@ CREATE TABLE players(
     --field for player's rating, integer, check is between 0 and 4000
     email VARCHAR(50),             --field for player's email, 50 characters max
     club VARCHAR(50),              --field for player's club, 50 characters max
-    add_points FLOAT CHECK (add_points >= 0 AND add_points <= 50) NOT NULL
-    --field for additional points, float, not null, check is between 0 and 50
 );
+
+--i didn't make it foreign key specificly, so that the player still stays in the database if the creator was deleted, it just cannot ever be edited again
+ALTER TABLE players
+ADD COLUMN created_by INT NOT NULL;
 
 --insert data into entity <players>
 INSERT INTO players (name, rating, email, club, add_points)
@@ -163,7 +165,14 @@ CREATE TABLE predefined(
 
 -------------------------------------------------------------------------------------------------------------------------
 
-"SELECT players.* FROM players JOIN entries ON players.player_id = entries.player_id WHERE entries.tournament_id = $1"
+`SELECT players.player_id, players.name, players.rating, players.club, entries.additional_points, entries.eliminated
+FROM players JOIN entries ON players.player_id = entries.player_id 
+WHERE entries.tournament_id = $1`
+
+SELECT players.player_id, players.name, players.rating, players.club, entries.additional_points, entries.eliminated
+FROM players JOIN entries ON players.player_id = entries.player_id 
+WHERE entries.tournament_id = 3
+
 
 --joint selection from entities <tournaments>, <players> and <entries>
 SELECT tournaments.name, players.name, players.rating, entries.score
@@ -187,9 +196,8 @@ ADD COLUMN password VARCHAR(30) NOT NULL,
 ADD COLUMN firstname VARCHAR(30) NOT NULL,
 ADD COLUMN surname VARCHAR(30) NOT NULL;
 
-ALTER TABLE tournaments
-DROP COLUMN max_players,
-DROP COLUMN num_rounds;
+
+
 
 ALTER TABLE tournaments
 ADD COLUMN max_participants SMALLINT CHECK (max_participants > 0 AND max_participants <= 1000),

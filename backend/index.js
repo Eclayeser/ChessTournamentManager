@@ -136,7 +136,7 @@ function verifyTournamentDetails(name, type, tie_break, max_rounds, max_particip
     };
 
     //check if type is one of the available types
-    if (type !== "Round-robin" && type !== "Swiss System" && type !== "Knockout") {
+    if (type !== "Round-robin" && type !== "Swiss System" && type !== "Knockout" && type !== null) {
         message = "Tournament type can only be of the available types";
         return { valid: false, message: message };
     };
@@ -711,7 +711,7 @@ app.put("/update-password", async (req, res) => {
 });
 
 
-
+//Account.js Component Route: delete the user
 app.delete("/delete-user", async (req, res) => {
     try {
         //returning object
@@ -762,7 +762,7 @@ app.post("/create-tournament", async (req, res) => {
         };
 
         //passed variables
-        const { name, type, tie_break, max_rounds, max_participants, hide_rating, bye_value } = req.body;
+        let { name, type, tie_break, max_rounds, max_participants, hide_rating, bye_value } = req.body;
 
         //verify that the request is authorised
         const sessionID = req.headers["session-id"];
@@ -774,6 +774,29 @@ app.post("/create-tournament", async (req, res) => {
 
         //get the userID from the session
         req.userID = sessions[sessionID].userID;
+
+        //define settings if knockout
+        if (type === "Knockout"){
+            bye_value = 0;
+            tie_break = null;
+            //halves every time
+            max_rounds =  Math.ceil(Math.log2(max_participants))
+        }
+
+        //define settings if round-robin
+        if (type === "Round-robin"){
+            bye_value = 0
+            //max rounds: 3,4 -> 3; 5,6 -> 5
+            if (max_participants % 2 === 1){
+                max_rounds = max_participants 
+            } else {
+                max_rounds = max_participants - 1
+            }
+            if (max_rounds > 50) {
+                max_rounds = 50
+            }
+            
+        }
   
         //validate tournament details
         const validationResult = verifyTournamentDetails(name, type, tie_break, max_rounds, max_participants, hide_rating);
@@ -786,9 +809,9 @@ app.post("/create-tournament", async (req, res) => {
         //insert new tournament
         const newTournament = await pool.query(
             `INSERT INTO tournaments 
-            (user_id, name, type, max_rounds, max_participants, bye_value, tie_break, hide_rating)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING tournament_id`,
-            [req.userID, name, type, max_rounds, max_participants, bye_value, tie_break, hide_rating]
+            (user_id, name, type, max_rounds, max_participants, bye_value, tie_break, hide_rating, status)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING tournament_id`,
+            [req.userID, name, type, max_rounds, max_participants, bye_value, tie_break, hide_rating, 'initialised']
         );
 
         resObject.success = true;
@@ -811,12 +834,6 @@ app.put("/tournament/:id/update-details", async (req, res) => {
             message: ""
         };
 
-        //passed variables
-        const { name, max_rounds, max_participants, bye_value, hide_rating } = req.body;
-
-        //get the id from the URL and verify it is an integer
-        const { id } = req.params;
-
         //verify that the request is authorised
         const sessionID = req.headers["session-id"];
         if (!sessionID || !sessions[sessionID]) {
@@ -828,6 +845,40 @@ app.put("/tournament/:id/update-details", async (req, res) => {
         //get the userID from the session
         req.userID = sessions[sessionID].userID;
 
+        //get the id from the URL and verify it is an integer
+        const { id } = req.params;
+        if (isNaN(id)) {
+            resObject.message = "Invalid tournament ID";
+            return res.json(resObject);
+        };
+
+        //passed variables
+        let { name, type, max_rounds, max_participants, bye_value, hide_rating } = req.body;
+
+               
+        //define settings if knockout
+        if (type === "Knockout"){
+            bye_value = 0;
+            tie_break = null;
+            //halves every time
+            max_rounds =  Math.ceil(Math.log2(max_participants))
+        }
+
+        //define settings if round-robin
+        if (type === "Round-robin"){
+            bye_value = 0
+            //max rounds: 3,4 -> 3; 5,6 -> 5
+            if (max_participants % 2 === 1){
+                max_rounds = max_participants 
+            } else {
+                max_rounds = max_participants - 1
+            }
+            if (max_rounds > 50) {
+                max_rounds = 50
+            }
+            
+        }
+  
 
         //validate tournament details
         const validationResult = verifyTournamentDetails(name, "=PASS=", "=PASS=", max_rounds, max_participants, hide_rating);
@@ -1031,8 +1082,8 @@ app.post("/tournament/:id/create-player", async (req, res) => {
 
         //create new player
         const newPlayer = await pool.query(
-            "INSERT INTO players (name, rating, club, email) VALUES ($1, $2, $3, $4) RETURNING players.player_id;",
-            [name, rating, club, email]
+            "INSERT INTO players (name, rating, club, email, created_by) VALUES ($1, $2, $3, $4, $5) RETURNING players.player_id;",
+            [name, rating, club, email, req.userID]
         );
 
         //create new entry
@@ -1179,77 +1230,96 @@ app.post("/tournament/:id/fetch-player-details", async (req, res) => {
     }
 });
 
-/*
-app.put("/edit-player-details", async (req, res) => {
+
+//TournamentPlayers.js Component Route: edit player, entry details
+app.put("/tournament/:id/edit-player-details", async (req, res) => {
     try {
         //returning object
         const resObject = {
             found: false,
             success: false,
-            message: "",
-            player: null
+            message: ""
         };
 
         //verify that the request is authorised
         const sessionID = req.headers["session-id"];
-
-        let { player_id, name, rating, club, add_points } = req.body;
-
         if (!sessionID || !sessions[sessionID]) {
             resObject.message = "Session has expired";
             return res.status(401).json(resObject);
         }
         resObject.found = true;
 
+        //get the id from the URL and verify it is an integer
+        const { id } = req.params;
+        if (isNaN(id)) {
+            resObject.message = "Invalid tournament ID";
+            return res.json(resObject);
+        };
+
+        //get the userID from the session
+        req.userID = sessions[sessionID].userID;
+
+
+        let { player_id, name, rating, club, additional_points, created_by } = req.body;
+
+        
         //check if empty or null
         if (!name) {
             resObject.message = "Data field cannot be left empty ";
             return res.json(resObject);
-        }
+        };
         if (!rating) {
             rating = 0;
-        }
+        };
         if (!club) {
             club = "-";
-        }
-        if (!add_points) {
-            add_points = 0;
+        };
+        if (!additional_points) {
+            additional_points = 0;
+        };
+
+        console.log(player_id, name, rating, club, additional_points, created_by)
+        console.log(req.userID)
+
+        //check if player details meet constraints
+        const validationResult = verifyPlayerDetails(name, rating, club, "=PASS=");
+        if (!validationResult.valid) {
+            resObject.message = validationResult.message;
+            return res.json(resObject);
+        };
+
+        //check if entry details meet constraints
+        const entryValidationResult = verifyEntryDetails(additional_points, "=PASS=");
+        if (!entryValidationResult.valid) {
+            resObject.message = entryValidationResult.message;
+            return res.json(resObject);
         }
 
-        //check if meet constraints
-        if ( rating < 0 || rating > 4000 || !Number.isInteger(rating)) {
-            resObject.message = "Rating must be an integer between 0 and 4000";
-            return res.json(resObject);
-        }
-        if ((!playerNameConstraints.test(name))) {
-            resObject.message = "Name exceeds range limit or contains inappropriate characters";
-            return res.json(resObject);
-        }
-        if ((!clubConstraints.test(club))) {
-            resObject.message = "Club exceeds range limit or contains inappropriate characters";
-            return res.json(resObject);
-        }
-        if (add_points < 0 || add_points > 1000 || add_points % 0.5 !== 0) {
-            resObject.message = "Additional points must be a multiple of 0.5 between 0 and 1000";
-            return res.json(resObject);
+        //update player details if creator
+        if (req.userID === created_by) {
+            const updatedPlayer = await pool.query(
+                "UPDATE players SET name = $1, rating = $2, club = $3 WHERE player_id = $4;",
+                [name, rating, club, player_id]
+            );
+            console.log("Itself updated")
         }
 
-        //update player details
-        const updatedPlayer = await pool.query(
-            "UPDATE players SET name = $1, rating = $2, club = $3, add_points = $4 WHERE player_id = $5 RETURNING *;",
-            [name, rating, club, add_points, player_id]
+        //update entry details
+        const updateEntry = await pool.query(
+            "UPDATE entries SET additional_points = $1 WHERE player_id = $2 AND tournament_id = $3",
+            [additional_points, player_id, id]
         );
 
-        resObject.player = updatedPlayer.rows[0];
         resObject.success = true;
-        resObject.message = "Player details have been updated";
+        resObject.message = "Participant details have been updated";
         return res.json(resObject);
     } catch (err) {
         console.error(err.message);
     }
 });
-*/
 
+
+//TournamentPlayers.js Component Route: remove player
 app.delete("/tournament/:id/remove-player", async (req, res) => {
     try {
         //returning object
@@ -1288,6 +1358,12 @@ app.delete("/tournament/:id/remove-player", async (req, res) => {
             [player_id, id]
         );
 
+        //delete forbidden player that contains just removed player
+        const deleteForbidden = await pool.query(
+            "DELETE FROM forbidden WHERE tournament_id = $1 AND (player_1_id = $2 OR player_2_id = $2);",
+            [id, player_id]
+        );
+
         resObject.success = true;
         resObject.message = "Player has been removed";
         return res.json(resObject);
@@ -1297,20 +1373,17 @@ app.delete("/tournament/:id/remove-player", async (req, res) => {
     }
 });
 
-
-/*
-app.get("/tournament/:id/forbidden-pairs", async (req, res) => {
+//TournamentPlayers.js Component route: fetch all forbidden pairs for this tournament
+app.get("/tournament/:id/fetch-forbidden-pairs", async (req, res) => {
     try {
         //returning object
         const resObject = {
             success: false,
             found: false,
             message: "",
-            forbidden: null
+            forbidden_pairs: null
         };
 
-        //get the id from the URL and verify it is an integer
-        const { id } = req.params;
 
         //verify that the request is authorised
         const sessionID = req.headers["session-id"];
@@ -1320,38 +1393,24 @@ app.get("/tournament/:id/forbidden-pairs", async (req, res) => {
         }
         resObject.found = true;
 
-        //if user is authorised, get the forbidden pairs
-        const forbidden = await pool.query(
-            "SELECT forbidden FROM tournaments WHERE tournament_id = $1",
+        //get the id from the URL and verify it is an integer
+        const { id } = req.params;
+        if (isNaN(id)) {
+            resObject.message = "Invalid tournament ID";
+            return res.json(resObject);
+        };
+
+        //get the forbidden pairs
+        const forbiddenPairs = await pool.query(
+            `SELECT forbidden.pair_id, forbidden.player_1_id, p1.name AS player_1_name, forbidden.player_2_id, p2.name AS player_2_name
+            FROM forbidden
+            JOIN players p1 ON forbidden.player_1_id = p1.player_id
+            JOIN players p2 ON forbidden.player_2_id = p2.player_id
+            WHERE forbidden.tournament_id = $1;`,
             [id]
         );
-        const forbidden_pairs_ids = forbidden.rows[0].forbidden;
-        //console.log(forbidden_pairs_ids);
-        
-        
-        const forbidden_pairs = [];
 
-        for (const index in forbidden_pairs_ids) {
-            const forbidden_player_1 = await pool.query(
-                "SELECT name FROM players WHERE player_id = $1",
-                [forbidden_pairs_ids[index][0]]
-            );
-            //console.log(forbidden_player_1);
-            const forbidden_player_2 = await pool.query(
-                "SELECT name FROM players WHERE player_id = $1",
-                [forbidden_pairs_ids[index][1]]
-            );
-            //console.log(forbidden_player_2);
-            forbidden_pairs.push({
-                player1_name: forbidden_player_1.rows[0].name, 
-                player2_name: forbidden_player_2.rows[0].name,
-                player1_id: forbidden_pairs_ids[index][0],
-                player2_id: forbidden_pairs_ids[index][1]
-            });
-        }
-
- 
-        resObject.forbidden_pairs = forbidden_pairs;
+        resObject.forbidden_pairs = forbiddenPairs.rows;
         resObject.success = true;
         resObject.message = "Forbidden pairs have been found";
         return res.json(resObject);
@@ -1362,61 +1421,8 @@ app.get("/tournament/:id/forbidden-pairs", async (req, res) => {
     }
 });
 
-app.put("/tournament/:id/remove-forbidden-pair", async (req, res) => {
-    try {
-        //returning object
-        const resObject = {
-            found: false,
-            success: false,
-            message: ""
-        };
 
-        //get the id from the URL and verify it is an integer
-        const { id } = req.params;
-
-        
-
-        const { pair_id } = req.body;
-
-        //verify that the request is authorised
-        const sessionID = req.headers["session-id"];
-        if (!sessionID || !sessions[sessionID]) {
-            resObject.message = "Session has expired";
-            return res.status(401).json(resObject);
-        }
-        resObject.found = true;
-
-        const originalForbidden = await pool.query(
-            "SELECT forbidden FROM tournaments WHERE tournament_id = $1",
-            [id]
-        );
-        const forbidden_pairs = originalForbidden.rows[0].forbidden;
-
-        //check if the pair is valid
-        if (pair_id < 0 || pair_id >= forbidden_pairs.length || !Number.isInteger(pair_id)) {
-            resObject.message = "Invalid pair id";
-            return res.json(resObject);
-        }
-
-        //remove the pair from the 2d array
-        forbidden_pairs.splice(pair_id, 1);
-
-        //update the forbidden pairs
-        const updatedForbidden = await pool.query(
-            "UPDATE tournaments SET forbidden = $1 WHERE tournament_id = $2",
-            [forbidden_pairs, id]
-        );
-          
-        resObject.success = true;
-        resObject.message = "Forbidden pair has been removed";
-        resObject.forbidden_pairs = forbidden_pairs;
-        return res.json(resObject);
-
-    } catch (err) {
-        console.error(err.message);
-    }
-});
-
+//TournamentPlayers.js Component Route: add forbidden pair
 app.put("/tournament/:id/add-forbidden-pair", async (req, res) => {
     try {
         //returning object
@@ -1426,11 +1432,6 @@ app.put("/tournament/:id/add-forbidden-pair", async (req, res) => {
             message: ""
         };
 
-        //get the id from the URL and verify it is an integer
-        const { id } = req.params;
-
-        const { player1_id, player2_id } = req.body;
-
         //verify that the request is authorised
         const sessionID = req.headers["session-id"];
         if (!sessionID || !sessions[sessionID]) {
@@ -1439,70 +1440,49 @@ app.put("/tournament/:id/add-forbidden-pair", async (req, res) => {
         };
         resObject.found = true;
 
-        //check if empty or null
-        if (!player1_id || !player2_id) {
-            resObject.message = "No ids given";
+        //get the id from the URL and verify it is an integer
+        const { id } = req.params;
+        if (isNaN(id)) {
+            resObject.message = "Invalid tournament ID";
             return res.json(resObject);
         };
 
+        //passed variables
+        const { player_1_id, player_2_id } = req.body;
+
+        //check if empty or null or not integers
+        if (!player_1_id || !player_2_id || isNaN(player_1_id) || isNaN(player_2_id)) {
+            resObject.message = "Invalid player IDs";
+            return res.json(resObject);
+        };
+
+
         //check if the players are the same
-        if (player1_id === player2_id) {
+        if (player_1_id === player_2_id) {
             resObject.message = "Players cannot be the same";
             return res.json(resObject);
         };
 
-        //check if the ids are integers
-        if (!Number.isInteger(player1_id) || !Number.isInteger(player2_id)) {
-            resObject.message = "IDs must be integers";
+        //check that pair already exists
+        const existingPair = await pool.query(
+            "SELECT * FROM forbidden WHERE tournament_id = $1 AND ((player_1_id = $2 AND player_2_id = $3) OR (player_1_id = $3 AND player_2_id = $2));",
+            [id, player_1_id, player_2_id]
+        );
+
+        if (existingPair.rows.length > 0) {
+            resObject.message = "Forbidden pair already exists";
             return res.json(resObject);
         };
 
-        //check if players exist
-        const player1 = await pool.query(
-            "SELECT * FROM players WHERE player_id = $1",
-            [player1_id]
-        );
-        const player2 = await pool.query(
-            "SELECT * FROM players WHERE player_id = $1",
-            [player2_id]
+        //add a forbidden pair
+        const addForbiddenPair = await pool.query(
+            "INSERT INTO forbidden (tournament_id, player_1_id, player_2_id) VALUES ($1, $2, $3);",
+            [id, player_1_id, player_2_id]
         );
 
-        if (player1.rows.length === 0 || player2.rows.length === 0) {
-            resObject.message = "One or both players do not exist";
-            return res.json(resObject);
-        }
-
-        //get the forbidden pairs
-        const originalForbidden = await pool.query(
-            "SELECT forbidden FROM tournaments WHERE tournament_id = $1",
-            [id]
-        );
-        const forbidden_pairs = originalForbidden.rows[0].forbidden;
-
-        //check if the pair already exists
-        for (const index in forbidden_pairs) {
-            if (forbidden_pairs[index][0] === player1_id && forbidden_pairs[index][1] === player2_id) {
-                resObject.message = "Pair already exists";
-                return res.json(resObject);
-            }
-            if (forbidden_pairs[index][0] === player2_id && forbidden_pairs[index][1] === player1_id) {
-                resObject.message = "Pair already exists";
-                return res.json(resObject);
-            }
-        }
-
-        //add the pair to the 2d array
-        forbidden_pairs.push([player1_id, player2_id]);
-
-        //update the forbidden pairs
-        const updatedForbidden = await pool.query(
-            "UPDATE tournaments SET forbidden = $1 WHERE tournament_id = $2",
-            [forbidden_pairs, id]
-        );
           
         resObject.success = true;
         resObject.message = "Forbidden pair has been added";
-        resObject.forbidden_pairs = forbidden_pairs;
         return res.json(resObject);
 
     } catch (err) {
@@ -1510,6 +1490,56 @@ app.put("/tournament/:id/add-forbidden-pair", async (req, res) => {
     }
 });
 
+
+//TournamentPlayers.js Component Route: remove forbidden pair
+app.put("/tournament/:id/remove-forbidden-pair", async (req, res) => {
+    try {
+        //returning object
+        const resObject = {
+            found: false,
+            success: false,
+            message: ""
+        };
+
+        //verify that the request is authorised
+        const sessionID = req.headers["session-id"];
+        if (!sessionID || !sessions[sessionID]) {
+            resObject.message = "Session has expired";
+            return res.status(401).json(resObject);
+        }
+        resObject.found = true;
+
+        //get the id from the URL and verify it is an integer
+        const { id } = req.params;
+        if (isNaN(id)) {
+            resObject.message = "Invalid tournament ID";
+            return res.json(resObject);
+        };
+
+        //passed variables
+        const { pair_id } = req.body;
+        if (!pair_id || isNaN(pair_id)) {
+            resObject.message = "Invalid pair ID";
+            return res.json(resObject);
+        };
+
+        //remove a forbidden pair
+        const removeForbiddenPair = await pool.query(
+            "DELETE FROM forbidden WHERE pair_id = $1;",
+            [pair_id]
+        );
+          
+        resObject.success = true;
+        resObject.message = "Forbidden pair has been removed";
+        return res.json(resObject);
+
+    } catch (err) {
+        console.error(err.message);
+    }
+});
+
+
+/*
 //TournamentStandings.js
 app.get("/tournament/:id/standings", async (req, res) => {
     try {

@@ -84,7 +84,7 @@ function MyAccount() {
     const [usernameOriginal, setUsernameOriginal] = useState("");
     const [emailOriginal, setEmailOriginal] = useState("");
     const [surnameOriginal, setSurnameOriginal] = useState("");
-    const [passwordOriginal, setPasswordOriginal] = useState("");
+
     const [firstNameOriginal, setfirstNameOriginal] = useState("");
 
 
@@ -109,7 +109,7 @@ function MyAccount() {
                 setEmailOriginal(server_resObject.user.email);
                 setSurnameOriginal(server_resObject.user.surname);
                 setfirstNameOriginal(server_resObject.user.firstname);
-                setPasswordOriginal(server_resObject.user.password);
+
             } else {
                 localStorage.removeItem("sessionID");
                 localStorage.setItem("globalMessage", server_resObject.message);
@@ -291,7 +291,7 @@ function MyAccount() {
             <label>Email: <input type="text" value={emailOriginal} readOnly /> </label>
             <button onClick={logOut}>Log Out</button>
             <button onClick={openModalDetails}>Change Personal Details</button>
-            <button on onClick={openModalDelConf}>Delete Account</button>
+            <button onClick={openModalDelConf}>Delete Account</button>
 
             {/* Change Personal Details Pop-up */}
             <Modal isOpen={isModalOpenDetails} onClose={closeModalDetails} title="Personal Details" errorDisplay={error} successDisplay={successMessage}>

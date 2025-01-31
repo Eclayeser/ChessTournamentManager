@@ -23,13 +23,6 @@ const CreateTournamentDisplay = () => {
         e.preventDefault();
         setError("");
 
-        let calculatedMaxRounds = maxRounds;
-
-        if (type === "Knockout") {
-            //calculate number of rounds for knockout
-            calculatedMaxRounds = Math.ceil(Math.log2(maxParticipants));
-        };
-
         try {
             const sessionID = localStorage.getItem("sessionID");
 
@@ -37,7 +30,7 @@ const CreateTournamentDisplay = () => {
                 name: name,
                 type: type,
                 tie_break: tieBreak,
-                max_rounds: calculatedMaxRounds,
+                max_rounds: maxRounds,
                 max_participants: maxParticipants,
                 hide_rating: hideRating,
                 bye_value: byeVal
@@ -88,10 +81,14 @@ const CreateTournamentDisplay = () => {
                 </label>
 
                 <label> Maximum number of Rounds:
-                    {type === "Knockout" ? 
-                    <input type="text" value={"*disabled for Knockout*"} disabled /> 
-                    : 
-                    <input type="number" value={maxRounds} onChange={(e) => setMaxRounds(Number(e.target.value))} min={1} max={50} required />}
+                    {type === "Knockout" ? (
+                    <input type="text" value={"*calculated for Knockout*"} disabled /> 
+                    ) : 
+                    type === "Round-robin" ? (
+                    <input type="text" value={"*calculated for Round-robin*"} disabled /> 
+                    ) : (
+                    <input type="number" value={maxRounds} onChange={(e) => setMaxRounds(Number(e.target.value))} min={1} max={50} required />
+                    )}
                 </label>
 
                 <label> Maximum Players:
@@ -107,20 +104,31 @@ const CreateTournamentDisplay = () => {
                 </label>
 
                 <label> Bye Value:
-                    <select value={byeVal} onChange={(e) => setByeVal(Number(e.target.value))} required>
-                        <option value={0}>0</option>
-                        <option value={0.5}>0.5</option>
-                        <option value={1}>1</option>
-                    </select>
+                    {type === "Knockout" ? (
+                        <input type="text" value={"*default 0 for Knockout*"} disabled /> 
+                    ) : 
+                    type === "Round-robin" ? (
+                        <input type="text" value={"*default 0 for Round-robin*"} disabled /> 
+                    ) : (
+                        <select value={byeVal} onChange={(e) => setByeVal(Number(e.target.value))} required>
+                            <option value={0}>0</option>
+                            <option value={0.5}>0.5</option>
+                            <option value={1}>1</option>
+                        </select>
+                    )}
                 </label>
 
                 <label> Tie Break:
-                    <select value={tieBreak} onChange={(e) => setTieBreak(e.target.value)} required>
-                        <option value={"Buchholz Total"}>Buchholz Total</option>
-                        <option value={"Buchholz Cut 1"}>Buchholz Cut 1</option>
-                        <option value={"Buchholz Cut Median"}>Buchholz Cut Median</option>
-                        <option value={"Sonneborn-Berger"}>Sonneborn-Berger</option>
-                    </select>
+                    {type === "Knockout" ? 
+                        <input type="text" value={"*unavailable for Knockout*"} disabled /> 
+                        : 
+                        <select value={tieBreak} onChange={(e) => setTieBreak(e.target.value)} required>
+                            <option value={"Buchholz Total"}>Buchholz Total</option>
+                            <option value={"Buchholz Cut 1"}>Buchholz Cut 1</option>
+                            <option value={"Buchholz Cut Median"}>Buchholz Cut Median</option>
+                            <option value={"Sonneborn-Berger"}>Sonneborn-Berger</option>
+                        </select>
+                    }
                 </label>
 
                 <label> Hide Rating:

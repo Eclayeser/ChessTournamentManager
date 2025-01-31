@@ -15,9 +15,7 @@ const DisplayPlayers = () => {
 
     const [tournamentDetails, setTournamentDetails] = useState({}); 
 
-    const [tournamentName, setTournamentName] = useState("");
-
-    //const [forbiddenPairs, setForbiddenPairs] = useState([]);
+    const [forbiddenPairs, setForbiddenPairs] = useState([]);
 
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
@@ -25,15 +23,14 @@ const DisplayPlayers = () => {
     const [rating, setRating] = useState(0);
     const [addPoints, setAddPoints] = useState(0);
     const [eliminated, setEliminated] = useState(false);
+    const [createdBy, setCreatedBy] = useState(0);
 
     const [existingEmail, setExistingEmail] = useState("");
 
     const [editPlayerId, setEditPlayerId] = useState(null);
 
-
-
-    const [player1, setPlayer1] = useState("");
-    const [player2, setPlayer2] = useState("");
+    const [player1ID, setPlayer1ID] = useState("");
+    const [player2ID, setPlayer2ID] = useState("");
 
     const [error, setError] = useState("");
     const [successMessage, setSuccessMessage] = useState("");
@@ -97,7 +94,7 @@ const DisplayPlayers = () => {
         setError("");
     };
 
-    /*
+    
     //Forbidden Pairs Modal
     const [isModalOpenForbPairs, setIsModalOpenForbPairs] = useState(false);
 
@@ -114,20 +111,24 @@ const DisplayPlayers = () => {
         setError("");
     };
 
+    
     //Add Frobidden Pair Modal
     const [isModalOpenAddForbPair, setIsModalOpenAddForbPair] = useState(false);
 
+
     const openModalAddForbPair = () => {
         setIsModalOpenAddForbPair(true);
+        closeModalForbPairs();
     };
 
     const closeModalAddForbPair = () => {
         setIsModalOpenAddForbPair(false);
+        openModalForbPairs();
     };
 
     
 
-    */
+    
 
     const fillPlayerDetails = (player) => {
         setName(player.name);
@@ -136,6 +137,7 @@ const DisplayPlayers = () => {
         setRating(player.rating);
         setAddPoints(player.additional_points);
         setEliminated(player.eliminated);
+        setCreatedBy(player.created_by)
     };
 
     const emptyPlayerDetails = () => {
@@ -145,6 +147,7 @@ const DisplayPlayers = () => {
         setRating(0);
         setAddPoints(0);
         setEliminated(null);
+        setCreatedBy(0);
 
         setExistingEmail("");
     };
@@ -171,8 +174,8 @@ const DisplayPlayers = () => {
                 if (server_resObject.players.length !== 0) {
                     setListPlayersTable(server_resObject.players);
 
-                    //setPlayer1(Number(server_resObject.players[0].player_id));
-                    //setPlayer2(Number(server_resObject.players[0].player_id));
+                    setPlayer1ID(Number(server_resObject.players[0].player_id));
+                    setPlayer2ID(Number(server_resObject.players[0].player_id));
                 };
                 
             } else {
@@ -330,6 +333,7 @@ const DisplayPlayers = () => {
                 setEditPlayerId(playerId);
                 openModalEditPlayer();
 
+               
             // if session expired -> remove sessionID and go to login page, else -> set error value
             } else {
 
@@ -349,7 +353,7 @@ const DisplayPlayers = () => {
         }
     };
 
-    /*
+    
     const editPlayerDetails = async (e) => {
         e.preventDefault();
         setError("");
@@ -363,10 +367,11 @@ const DisplayPlayers = () => {
                 name: name,
                 rating: rating,
                 club: club,
-                add_points: addPoints
+                additional_points: addPoints,
+                created_by: createdBy
             }
             //fetch request to server
-            const response = await fetch(`http://localhost:5000/edit-player-details`, {
+            const response = await fetch(`http://localhost:5000/tournament/${tournamentId}/edit-player-details`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json", "Session-Id": sessionID },
                 body: JSON.stringify(body),
@@ -396,8 +401,9 @@ const DisplayPlayers = () => {
             console.error(err.message);
         }
     };
-    */
+    
 
+    
     const removePlayer = async () => {
         setError("");
         setSuccessMessage("");
@@ -445,13 +451,13 @@ const DisplayPlayers = () => {
     
 
 
-    /*
+  
     const fetchForbiddenPairs = async () => {
         try {
             const sessionID = localStorage.getItem("sessionID");
 
             //send request to server
-            const response = await fetch(`http://localhost:5000/tournament/${tournamentId}/forbidden-pairs`, {
+            const response = await fetch(`http://localhost:5000/tournament/${tournamentId}/fetch-forbidden-pairs`, {
                 method: "GET",
                 headers: { "Content-Type": "application/json", "Session-Id": sessionID },
             });
@@ -484,6 +490,7 @@ const DisplayPlayers = () => {
     };
 
     const removeForbiddenPair = (pair_id) => async () => {
+        console.log(pair_id)
         
         try {
             const sessionID = localStorage.getItem("sessionID");
@@ -522,7 +529,8 @@ const DisplayPlayers = () => {
             console.error(err.message);
         };
     };
-            
+           
+
     const addForbiddenPair = async () => {
         setError("");
 
@@ -530,8 +538,8 @@ const DisplayPlayers = () => {
             const sessionID = localStorage.getItem("sessionID");
 
             const body = {
-                player1_id: player1,
-                player2_id: player2
+                player_1_id: player1ID,
+                player_2_id: player2ID
             }
 
             const response = await fetch(`http://localhost:5000/tournament/${tournamentId}/add-forbidden-pair`, {
@@ -562,7 +570,7 @@ const DisplayPlayers = () => {
         }
     };
 
-    */
+    
     const saveCSV = () => {
         //convert table to csv
         const rows = document.querySelectorAll("table tr");
@@ -583,8 +591,7 @@ const DisplayPlayers = () => {
     useEffect(() => {
         fetchPlayers();
         setError("");
-        setSuccessMessage("");
-    }, [tournamentId]);
+    }, []);
 
     //Display the component
     return (
@@ -596,7 +603,7 @@ const DisplayPlayers = () => {
             <div>
 
                 <button onClick={openModalAddPlayer}>Add Player</button>
-                {/*<button onClick={openModalForbPairs}>Forbidden Pairs</button>*/}
+                <button onClick={openModalForbPairs}>Forbidden Pairs</button>
 
                 {/*Table of Players*/}
                 <table style={{ border: "1px solid black" }}>
@@ -607,7 +614,7 @@ const DisplayPlayers = () => {
                             {tournamentDetails.hide_rating ? (null):(<th>Rating</th>)}
                             <th>Club</th>
                             <th>Add. Pts</th>
-                            <th>Eliminated</th>
+                            {tournamentDetails.type === "Knockout" ? (<th>Eliminated</th>):(null)}
                         </tr>
                     </thead>
                     <tbody>
@@ -618,7 +625,10 @@ const DisplayPlayers = () => {
                                 {tournamentDetails.hide_rating ? (null):(<th>{player.rating}</th>)}
                                 <td>{player.club}</td>
                                 <td>{player.additional_points}</td>
-                                <td>{player.eliminated}</td>
+                                {tournamentDetails.type === "Knockout" ? (
+                                    player.eliminated ? (<th> Yes </th>) 
+                                    : (<th> No </th>)
+                                ):(null)}
                             </tr>
                         ))}
                     </tbody>
@@ -631,7 +641,7 @@ const DisplayPlayers = () => {
             <div>
                 <button onClick={() => navigate(`/tournament/${tournamentId}/standings`)}>Standings</button>
                 <button onClick={() => navigate(`/tournament/${tournamentId}/players`)}>Players</button>
-                <button>Rounds</button>
+                <button onClick={() => navigate(`/tournament/${tournamentId}/rounds`)}>Rounds</button>
                 <button onClick={() => navigate(`/tournament/${tournamentId}/settings`)}>Settings</button>
             </div>
 
@@ -655,14 +665,57 @@ const DisplayPlayers = () => {
             {/*Edit Player Modal*/}
             <Modal isOpen={isModalOpenEditPlayer} onClose={closeModalEditPlayer} title="Edit Player" errorDisplay={error} successDisplay={successMessage}>
                 
-                {/*onSubmit={editPlayerDetails}*/}
-                <form style={{ display: 'flex', flexDirection: 'column' }}>
-                    <label>Name: <input type="text" value={name} onChange={(e) => setName(e.target.value)} required /> </label>
-                    <label>Email: <input type="email" value={email} readOnly/> </label>
-                    <label>Club: <input type="text" value={club} onChange={(e) => setClub(e.target.value)}/> </label>
-                    <label>Rating: <input type="number" value={rating} onChange={(e) => setRating(Number(e.target.value))} min={0} max={4000}/> </label>
-                    <label>Additional Points: <input type="text" value={addPoints} onChange={(e) => setAddPoints(e.target.value)} min={0}/> </label>
-                    <label>Eliminated: <input type="text" value={eliminated} onChange={(e) => setEliminated(e.target.value)}/> </label>
+                
+                <form onSubmit={editPlayerDetails} style={{ display: 'flex', flexDirection: 'column' }}>
+                   
+                    <label>Name: 
+                        {tournamentDetails.user_id === createdBy ? (
+                            <input type="text" value={name} onChange={(e) => setName(e.target.value)} required />
+                        ) : (
+                            <input type="text" value={name} disabled />  
+                        )}
+                         
+                    </label>
+
+                    <label>Email: 
+                        <input type="email" value={email} readOnly/> 
+                    </label>
+
+                    <label>Club: 
+                        {tournamentDetails.user_id === createdBy ? (
+                            <input type="text" value={club} onChange={(e) => setClub(e.target.value)}/> 
+                        ) : (
+                            <input type="text" value={club} disabled/> 
+                        )}
+                        
+                    </label>
+
+                    <label>Rating: 
+                        {tournamentDetails.user_id === createdBy ? (
+                            <input type="number" value={rating} onChange={(e) => setRating(Number(e.target.value))} min={0} max={4000}/>
+                        ) : (
+                            <input type="number" value={rating} disabled/>
+                        )}
+                         
+                    </label>
+
+                    <label>Additional Points: 
+                        <input type="text" value={addPoints} onChange={(e) => setAddPoints(e.target.value)} min={0}/> 
+                    </label>
+
+                    {tournamentDetails.type === "Knockout" ? (
+                        <label>Eliminated: 
+                            {eliminated ? (
+                                <input type="text" value={"Yes"} disabled/> 
+                            ):(
+                                <input type="text" value={"No"} disabled/> 
+                            )}
+                            
+                        </label>
+                    ):(
+                        null
+                    )}
+                    
                     <button type="submit">Save</button> 
                 </form>
                 
@@ -680,21 +733,8 @@ const DisplayPlayers = () => {
                 <button onClick={closeModalRemConf}>Cancel</button>
 
             </Modal>
-        </div>
 
-
-    );
-}
-
-export default DisplayPlayers;
-
-
-
-            
-            
-            /*
-
-            { Forbidden Pairs Modal }
+            {/* Forbidden Pairs Modal */}
             <Modal isOpen={isModalOpenForbPairs} onClose={closeModalForbPairs} title="Forbidden Pairs">
                 
                 <table>
@@ -709,33 +749,35 @@ export default DisplayPlayers;
 
                     <tbody>
                         {forbiddenPairs.map((forbPair, index) => (
-                            <tr key={`${forbPair.player1_id}-${forbPair.player2_id}`}>
+                            <tr key={forbPair.pair_id}>
                                 <td>{index + 1}</td>
-                                <td>{forbPair.player1_name}</td>
-                                <td>{forbPair.player2_name}</td>
-                                <td><button onClick={removeForbiddenPair(index)}>Remove Pair</button></td>
+                                <td>{forbPair.player_1_name}</td>
+                                <td>{forbPair.player_2_name}</td>
+                                <td><button onClick={removeForbiddenPair(forbPair.pair_id)}>Remove Pair</button></td>
                             </tr>
                         ))}
                     </tbody>
                 </table>
 
                 <button onClick={openModalAddForbPair}>Add Pair</button>
+
             </Modal>
 
-            { Add Forbidden Pair Modal }
+
+            {/* Add Forbidden Pair Modal */}
             <Modal isOpen={isModalOpenAddForbPair} onClose={closeModalAddForbPair} title="Add a Pair" errorDisplay={error}>
                 
                  <label> Player 1:
-                    <select value={player1} onChange={(e) => setPlayer1(Number(e.target.value))} required>
-                        {players.map((player) => (
+                    <select value={player1ID} onChange={(e) => setPlayer1ID(Number(e.target.value))} required>
+                        {listPlayersTable.map((player) => (
                             <option key={player.player_id} value={player.player_id}>{player.name}</option>
                         ))}
                     </select>
                 </label>
 
                 <label> Player 2:
-                    <select value={player2} onChange={(e) => setPlayer2(Number(e.target.value))} required>
-                        {players.map((player) => (
+                    <select value={player2ID} onChange={(e) => setPlayer2ID(Number(e.target.value))} required>
+                        {listPlayersTable.map((player) => (
                             <option key={player.player_id} value={player.player_id}>{player.name}</option>
                         ))}
                     </select>
@@ -744,4 +786,11 @@ export default DisplayPlayers;
                 <button onClick={addForbiddenPair}>Add</button>
 
             </Modal>
-            */
+
+        </div>
+
+
+    );
+}
+
+export default DisplayPlayers;

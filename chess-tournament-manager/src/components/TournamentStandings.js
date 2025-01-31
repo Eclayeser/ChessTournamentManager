@@ -82,7 +82,7 @@ const DisplayStandings = () => {
             <div>
                 <button onClick={() => navigate(`/tournament/${tournamentId}/standings`)}>Standings</button>
                 <button onClick={() => navigate(`/tournament/${tournamentId}/players`)}>Players</button>
-                <button>Rounds</button>
+                <button onClick={() => navigate(`/tournament/${tournamentId}/rounds`)}>Rounds</button>
                 <button onClick={() => navigate(`/tournament/${tournamentId}/settings`)}>Settings</button>
             </div>
 

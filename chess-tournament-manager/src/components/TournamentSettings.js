@@ -12,7 +12,9 @@ const TournamentSettings = () => {
     const { tournamentId } = useParams();
 
     //variables
-    const [tournament, setTournament] = useState(null);
+    const [tournament, setTournament] = useState({});
+
+    const [status, setStatus] = useState("");
 
     const [name, setName] = useState("");
     const [type, setType] = useState("");
@@ -47,9 +49,6 @@ const TournamentSettings = () => {
     
     //Fetch tournament details function
     const requestTournamentDetails = async () => {
-        setError("");
-        setSuccessMessage("");
-
         try {
             //get sessionID from localStorage
             const sessionID = localStorage.getItem("sessionID");
@@ -69,12 +68,19 @@ const TournamentSettings = () => {
                 setTournament(server_resObject.details);
 
                 setType(server_resObject.details.type);
-                setTieBreak(server_resObject.details.tie_break);
                 setName(server_resObject.details.name);
                 setMaxRounds(server_resObject.details.max_rounds);
                 setMaxParticipants(server_resObject.details.max_participants);
                 setHideRating(server_resObject.details.hide_rating);
                 setByeVal(server_resObject.details.bye_value);
+                setStatus(server_resObject.details.status)
+
+                if (!server_resObject.details.tie_break) {
+                    setTieBreak("None")
+                } else {
+                    setTieBreak(server_resObject.details.tie_break);
+                }
+                
             } else {
 
                 if (server_resObject.found === false) {
@@ -104,6 +110,7 @@ const TournamentSettings = () => {
             //object to be sent to server
             const body = {
                         name: name,
+                        type: type,
                         max_rounds: maxRounds,
                         max_participants: maxParticipants,
                         bye_value: byeVal,
@@ -124,6 +131,7 @@ const TournamentSettings = () => {
             // if operation successful  -> set new tournament details
             if (server_resObject.success === true) {
                 setSuccessMessage(server_resObject.message);
+                requestTournamentDetails();
 
             // if session expired -> go to login page, else -> set error value    
             } else {
@@ -195,7 +203,8 @@ const TournamentSettings = () => {
     //Display component
     return (
         <div>
-            <h1>Tournament Settings</h1>
+            <h1>{tournament.name}: Settings</h1>
+            <h3>Tournament Status: {status}</h3>
 
             {error && <p style={{color:"red"}}>{error}</p>}
             {successMessage && <p style={{color:"green"}}>{successMessage}</p>}
@@ -208,7 +217,11 @@ const TournamentSettings = () => {
                 </label>
 
                 <label> Number of Rounds:
-                    <input type="number" value={maxRounds} onChange={(e) => setMaxRounds(Number(e.target.value))} min={1} max={50} required />
+                    { (tournament.type === "Knockout" || tournament.type === "Round-robin") ? (
+                        <input type="number" value={maxRounds} disabled />
+                    ) : (
+                        <input type="number" value={maxRounds} onChange={(e) => setMaxRounds(Number(e.target.value))} min={1} max={50} required />
+                    )}
                 </label>
 
                 <label> Maximum Players:
@@ -220,11 +233,15 @@ const TournamentSettings = () => {
                 </label>
 
                 <label> Bye Value:
-                    <select value={byeVal} onChange={(e) => setByeVal(Number(e.target.value))} required>
-                        <option value={0}>0</option>
-                        <option value={0.5}>0.5</option>
-                        <option value={1}>1</option>
-                    </select>
+                    {(tournament.type === "Knockout" || tournament.type === "Round-robin") ? (
+                        <input type="number" value={byeVal} disabled />
+                    ) : (
+                        <select value={byeVal} onChange={(e) => setByeVal(Number(e.target.value))} required>
+                            <option value={0}>0</option>
+                            <option value={0.5}>0.5</option>
+                            <option value={1}>1</option>
+                        </select>
+                    )}
                 </label>
 
                 <label> Tie Break:
@@ -244,7 +261,7 @@ const TournamentSettings = () => {
             <div>
                 <button onClick={() => navigate(`/tournament/${tournamentId}/standings`)}>Standings</button>
                 <button onClick={() => navigate(`/tournament/${tournamentId}/players`)}>Players</button>
-                <button>Rounds</button>
+                <button onClick={() => navigate(`/tournament/${tournamentId}/rounds`)}>Rounds</button>
                 <button onClick={() => navigate(`/tournament/${tournamentId}/settings`)}>Settings</button>
             </div>
 
