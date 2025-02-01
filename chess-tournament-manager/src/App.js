@@ -13,7 +13,7 @@ import TournamentSettings from "./components/TournamentSettings";
 import CreateTournamentDisplay from "./components/CreateTournament";
 import DisplayPlayers from "./components/TournamentPlayers";
 import DisplayStandings from "./components/TournamentStandings";
-import RoundsDisplay from "./components/Rounds";
+import RoundsDisplay from "./components/TournamentRounds";
 
 // Main App Component
 function App() {

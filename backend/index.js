@@ -301,6 +301,159 @@ function verifyEntryDetails(additional_points, eliminated) {
 };
 
 
+//Functiion: construct a list of objects that contain the player_id and the count of the number of times it has played white and black separately
+async function getPlayerColorCounts(tournamentId) {
+    try {
+      const result = await pool.query(`
+            SELECT 
+                p.white_player_id AS player_id, 
+                COUNT(p.white_player_id) AS white_count, 
+                0 AS black_count
+            FROM pairings p
+            JOIN rounds r ON p.round_id = r.round_id
+            WHERE r.tournament_id = $1 AND p.black_player_id IS NOT NULL
+            GROUP BY p.white_player_id
+        
+            UNION ALL
+        
+            SELECT 
+                p.black_player_id AS player_id, 
+                0 AS white_count, 
+                COUNT(p.black_player_id) AS black_count
+            FROM pairings p
+            JOIN rounds r ON p.round_id = r.round_id
+            WHERE r.tournament_id = $1 AND p.black_player_id IS NOT NULL
+            GROUP BY p.black_player_id;`,
+        [tournamentId]);
+
+      const playerCounts = {};
+  
+      result.rows.forEach(({ player_id, white_count, black_count }) => {
+        if (!playerCounts[player_id]) {
+          playerCounts[player_id] = { white: 0, black: 0 };
+        };
+        playerCounts[player_id].white += parseInt(white_count, 10);
+        playerCounts[player_id].black += parseInt(black_count, 10);
+      });
+  
+      return playerCounts;
+
+    } catch (error) {
+      console.error(error);
+    };
+};
+  
+
+//Function: form a list of not eliminated players in the tournament
+async function getNElimPlayers(tournamentId) {
+    try {
+        const players = await pool.query(`
+            SELECT players.player_id
+            FROM players 
+            JOIN entries ON players.player_id = entries.player_id
+            WHERE entries.tournament_id = $1 AND entries.eliminated = false`,
+        [tournamentId]);
+
+        const list = players.rows.map(player => player.player_id);
+        return list;
+
+    } catch (error) {
+        console.error(error);
+    };
+};
+
+
+//Function: form a list of objects to show what opponents has each player faced
+async function getPlayerOpponents(tournamentId) {
+    try {
+        const result = await pool.query(`
+            SELECT 
+                p.white_player_id AS player_id, 
+                p.black_player_id AS opponent_id
+            FROM pairings p
+            JOIN rounds r ON p.round_id = r.round_id
+            WHERE r.tournament_id = $1 AND p.black_player_id IS NOT NULL
+            
+            UNION ALL
+            
+            SELECT 
+                p.black_player_id AS player_id, 
+                p.white_player_id AS opponent_id
+            FROM pairings p
+            JOIN rounds r ON p.round_id = r.round_id
+            WHERE r.tournament_id = $1 AND p.black_player_id IS NOT NULL;`, 
+        [tournamentId]);
+
+        const playerOpponents = {};
+
+        result.rows.forEach(({ player_id, opponent_id }) => {
+        if (!playerOpponents[player_id]) {
+            playerOpponents[player_id] = [];
+        }
+        playerOpponents[player_id].push(opponent_id);
+        });
+
+        return playerOpponents;
+
+    } catch (error) {
+        console.error(error);
+    }
+}
+
+
+async function getPlayerPointsUntilRound(byeValue, tournamentId, roundNumber) {
+    try {
+        const result = await pool.query(`
+                SELECT 
+                    p.white_player_id AS player_id,
+                CASE 
+                    WHEN p.result = '1-0' THEN 1.0 
+                    WHEN p.result = '1/2-1/2' THEN 0.5 
+                    WHEN p.result = 'bye' THEN $1
+                    ELSE 0.0 
+                END AS points
+                FROM pairings p
+                JOIN rounds r ON p.round_id = r.round_id
+                WHERE r.tournament_id = $2 AND r.round_number < "$3"
+
+                UNION ALL
+
+                SELECT 
+                    p.black_player_id AS player_id,
+                CASE 
+                    WHEN p.result = '0-1' THEN 1.0 
+                    WHEN p.result = '1/2-1/2' THEN 0.5
+                    WHEN p.result = 'bye' THEN $1 
+                    ELSE 0.0 
+                END AS points
+                FROM pairings p
+                JOIN rounds r ON p.round_id = r.round_id
+                WHERE r.tournament_id = $2 AND r.round_number < $3 AND p.black_player_id iS NOT NULL;`, 
+            [byeValue, tournamentId, roundNumber]);
+
+        const playerPoints = {};
+
+        result.rows.forEach(({ player_id, points }) => {
+        if (!playerPoints[player_id]) {
+            playerPoints[player_id] = 0.0;
+        }
+        playerPoints[player_id] += parseFloat(points);
+        });
+
+        return playerPoints;
+    } catch (error) {
+        console.error(error);
+    }
+}
+
+
+(async () => {
+    const tournamentId = 16; // Replace with actual tournament ID
+    const listP = await getPlayerPointsUntilRound(5.0, tournamentId, 3);
+    console.log(listP);
+  })();
+
+
 //ROUTES//
 
 //Check Session Route
@@ -480,7 +633,7 @@ app.get("/fetch-tournaments", async (req, res) => {
 });
 
 
-//TournamentSettings.js Component Route: fetch tournament details (can be used in other components)
+//TournamentSettings.js and TournamentRounds.js Component Route: fetch tournament details (can be used in other components)
 app.get("/tournament/:id/fetch-details", async (req, res) => {
     try {
         //returning object
@@ -1538,22 +1691,15 @@ app.put("/tournament/:id/remove-forbidden-pair", async (req, res) => {
     }
 });
 
-
-/*
-//TournamentStandings.js
-app.get("/tournament/:id/standings", async (req, res) => {
+//TournamentRounds.js Component Route: start tournament
+app.put("/tournament/:id/start", async (req, res) => {
     try {
         //returning object
         const resObject = {
-            success: false,
             found: false,
-            message: "",
-            standings: null
-            //standings: [{player_name: "John", player_rating: 1000, points: 3, rounds_result: ["W", "L"], tiebreak_points: 10}, ]
+            success: false,
+            message: ""
         };
-
-        //get the id from the URL and verify it is an integer
-        const { id } = req.params;
 
         //verify that the request is authorised
         const sessionID = req.headers["session-id"];
@@ -1563,14 +1709,151 @@ app.get("/tournament/:id/standings", async (req, res) => {
         }
         resObject.found = true;
 
-        console.log("here");
+        //get the id from the URL and verify it is an integer
+        const { id } = req.params;
+        if (isNaN(id)) {
+            resObject.message = "Invalid tournament ID";
+            return res.json(resObject);
+        };
 
-        //Produce standings
+        //start the tournament
+        const startTournament = await pool.query(
+            "UPDATE tournaments SET status = $1 WHERE tournament_id = $2",
+            ["started", id]
+        );
 
-    //catch any errors
+        resObject.success = true;
+        resObject.message = "Tournament has been started";
+        return res.json(resObject);
+
     } catch (err) {
         console.error(err.message);
     }
 });
 
-*/
+//TournamentRounds.js Component Route: fetch all rounds
+app.get("/tournament/:id/fetch-rounds", async (req, res) => {
+    try {
+        //returning object
+        const resObject = {
+            success: false,
+            found: false,
+            message: "",
+            rounds: null
+        };
+
+        //verify that the request is authorised
+        const sessionID = req.headers["session-id"];
+        if (!sessionID || !sessions[sessionID]) {
+            resObject.message = "Session has expired";
+            return res.status(401).json(resObject);
+        }
+        resObject.found = true;
+
+        //get the id from the URL and verify it is an integer
+        const { id } = req.params;
+        if (isNaN(id)) {
+            resObject.message = "Invalid tournament ID";
+            return res.json(resObject);
+        };
+
+        //get the rounds
+        const rounds = await pool.query(
+            "SELECT * FROM rounds WHERE tournament_id = $1 ORDER BY round_number;",
+            [id]
+        );
+
+        resObject.rounds = rounds.rows;
+        resObject.success = true;
+        resObject.message = "Rounds have been found";
+        return res.json(resObject);
+
+    } catch (err) {
+        console.error(err.message);
+    }
+});
+
+//TournamentRounds.js Component Route: fetch round pairings
+app.get("/tournament/:id/fetch-round-pairings/:round_id", async (req, res) => {
+    try {
+        //returning object
+        const resObject = {
+            success: false,
+            found: false,
+            message: "",
+            pairings: null
+        };
+
+        //get the id from the URL and verify it is an integer
+        const { id, round_number } = req.params;
+        if (isNaN(id) || isNaN(round_number)) {
+            resObject.message = "Invalid tournament ID or round number";
+            return res.json(resObject);
+        };
+
+        //get the pairings
+        const pairings = await pool.query(
+            `SELECT pairings.pairing_id, pairings.player_1_id, p1.name AS player_1_name, pairings.player_2_id, p2.name AS player_2_name, pairings.result
+            FROM pairings
+            JOIN players p1 ON pairings.player_1_id = p1.player_id
+            JOIN players p2 ON pairings.player_2_id = p2.player_id
+            WHERE pairings.tournament_id = $1 AND pairings.round_id = $2
+            ORDER BY pairings.pairing_id;`,
+            [id, round_number]
+        );
+
+        resObject.pairings = pairings.rows;
+        resObject.success = true;
+        resObject.message = "Pairings have been found";
+        return res.json(resObject);
+
+    } catch (err) {
+        console.error(err.message);
+    }
+});
+
+
+async function getPlayerPointsUntilRound(tournamentId, roundNumber) {
+  const query = `
+    SELECT 
+      p.white_player_id AS player_id,
+      CASE 
+        WHEN p.result = '1-0' THEN 1.0 
+        WHEN p.result = '1/2-1/2' THEN 0.5 
+        ELSE 0.0 
+      END AS points
+    FROM pairings p
+    JOIN rounds r ON p.round_id = r.round_id
+    WHERE r.tournament_id = $1 AND r.round_number < $2
+    
+    UNION ALL
+    
+    SELECT 
+      p.black_player_id AS player_id,
+      CASE 
+        WHEN p.result = '0-1' THEN 1.0 
+        WHEN p.result = '1/2-1/2' THEN 0.5 
+        ELSE 0.0 
+      END AS points
+    FROM pairings p
+    JOIN rounds r ON p.round_id = r.id
+    WHERE r.tournament_id = $1 AND r.round_number <= $2;
+  `;
+
+  try {
+    const result = await pool.query(query, [tournamentId, roundNumber]);
+    const playerPoints = {};
+
+    result.rows.forEach(({ player_id, points }) => {
+      if (!playerPoints[player_id]) {
+        playerPoints[player_id] = 0.0;
+      }
+      playerPoints[player_id] += parseFloat(points);
+    });
+
+    return playerPoints;
+  } catch (error) {
+    console.error("Error executing query", error);
+    throw error;
+  }
+}

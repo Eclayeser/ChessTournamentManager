@@ -13,6 +13,7 @@ CREATE TABLE users(
     email VARCHAR(50) NOT NULL      --field for email, 50 characters max, not null
 );
 
+
 --insert data into entity <users>
 INSERT INTO users (username, password, firstname, surname, email)
 VALUES ('TestUser_1', 'pass1', 'NestaykoNestaykovuch', 'Nestaykov', 'nest@g.com');
@@ -78,9 +79,19 @@ ALTER TABLE players
 ADD COLUMN created_by INT NOT NULL;
 
 --insert data into entity <players>
-INSERT INTO players (name, rating, email, club, add_points)
-VALUES ('Nazar', 4000, 'naz@k.com', 'Bishops', 3.5);
+INSERT INTO players (name, rating, email, club, created_by)
+VALUES ('Terra', 1000, 'qqz@k.com', 'Bishops', 5);
 --Boundary Data: rating (4000)
+
+--insert into rounds
+INSERT INTO rounds (tournament_id, round_number)
+VALUES (16, 1);
+
+--Insert into pairings
+INSERT INTO pairings (round_id, white_player_id, black_player_id, result)
+VALUES (3, 14, null, '');
+
+
 
 --select all rows from entity <players>
 SELECT * FROM players;
@@ -132,8 +143,8 @@ VALUES (1, 1);
 CREATE TABLE pairings(
     pairing_id SERIAL PRIMARY KEY,            --field for pairing ID, autoincrement, primary key
     round_id INT REFERENCES rounds(round_ID) ON DELETE CASCADE NOT NULL, --field for round ID, foreign key, not null
-    white_player_id INT REFERENCES players(player_ID) ON DELETE CASCADE NOT NULL, --field for white player ID, foreign key, not null
-    blak_player_id INT REFERENCES players(player_ID) ON DELETE CASCADE NOT NULL, --field for black player ID, foreign key, not null
+    white_player_id INT REFERENCES players(player_ID) ON DELETE CASCADE, --field for white player ID, foreign key
+    black_player_id INT REFERENCES players(player_ID) ON DELETE CASCADE, --field for black player ID, foreign key
     result VARCHAR(10)                --field for result, 10 characters max
 );
 
@@ -196,7 +207,8 @@ ADD COLUMN password VARCHAR(30) NOT NULL,
 ADD COLUMN firstname VARCHAR(30) NOT NULL,
 ADD COLUMN surname VARCHAR(30) NOT NULL;
 
-
+ALTER TABLE pairings
+DROP COLUMN result;
 
 
 ALTER TABLE tournaments
@@ -231,12 +243,15 @@ VALUES ('tournament_2', 'test_type', 8);
 INSERT INTO tournaments (tournament_name, tournament_type, user_ID)
 VALUES ('tournament_3', 'test_type', 8);
 
-ALTER TABLE tournaments
-ADD COLUMN user_ID INTEGER;
+ALTER TABLE pairings
+ADD COLUMN white_player_id INT REFERENCES players(player_ID) ON DELETE CASCADE,
+ADD COLUMN black_player_id INT REFERENCES players(player_ID) ON DELETE CASCADE, 
+ADD COLUMN result VARCHAR(10);
 
-
-
-
+ALTER TABLE pairings
+DROP COLUMN white_player_id,
+DROP COLUMN black_player_id,
+DROP COLUMN result;
 
 ALTER TABLE tournaments DROP CONSTRAINT tournaments_user_id_fkey;
 
@@ -267,3 +282,105 @@ VALUES ('MMM', 'pass', 10000, '{"key": "value", "key2": [1, 2, 3]}');
 
 
 SELECT (COALESCE((score->'round1'->>'result')::float, 0) + COALESCE((score->'round2'->>'result')::float, 0)) AS total_points FROM entries WHERE entry_id = 34;
+
+SELECT 
+p.white_player_id AS player_id, 
+COUNT(p.white_player_id) AS white_count, 
+0 AS black_count
+FROM pairings p
+JOIN rounds r ON p.round_id = r.round_id
+WHERE r.tournament_id = 16 AND p.black_player_id IS NOT NULL
+GROUP BY p.white_player_id
+
+UNION ALL
+
+SELECT 
+p.black_player_id AS player_id, 
+0 AS white_count, 
+COUNT(p.black_player_id) AS black_count
+FROM pairings p
+JOIN rounds r ON p.round_id = r.round_id
+WHERE r.tournament_id = 16 AND p.black_player_id IS NOT NULL
+GROUP BY p.black_player_id;
+
+-------
+SELECT 
+p.white_player_id AS player_id, 
+p.black_player_id AS opponent_id
+FROM pairings p
+JOIN rounds r ON p.round_id = r.round_id
+WHERE r.tournament_id = 16 AND p.black_player_id IS NOT NULL
+
+UNION ALL
+
+SELECT 
+p.black_player_id AS player_id, 
+p.white_player_id AS opponent_id
+FROM pairings p
+JOIN rounds r ON p.round_id = r.round_id
+WHERE r.tournament_id = 16 AND p.black_player_id IS NOT NULL;
+
+
+pairings = {{white_player_id: *num*, white_player_name: "", white_player_rating: *num*, white_player_points: *num*, black_player_id: *num*, black_player_name: "", black_player_rating: *num*, black_player_points: *num*, result: ""}, ...}
+
+
+-------------------------------------------------------------------------------------------------------------------------
+
+UPDATE pairings
+SET result = 'bye'
+WHERE pairing_id = 7 OR pairing_id = 10;
+
+SELECT 
+p.white_player_id AS player_id,
+CASE 
+WHEN p.result = '1-0' THEN 1.0 
+WHEN p.result = '1/2-1/2' THEN 0.5 
+WHEN p.result = 'bye' THEN 2.0
+ELSE 0.0 
+END AS points
+FROM pairings p
+JOIN rounds r ON p.round_id = r.round_id
+WHERE r.tournament_id = 16 AND r.round_number < 3
+
+UNION ALL
+
+SELECT 
+p.black_player_id AS player_id,
+CASE 
+WHEN p.result = '0-1' THEN 1.0 
+WHEN p.result = '1/2-1/2' THEN 0.5
+WHEN p.result = 'bye' THEN 2.0 
+ELSE 0.0 
+END AS points
+FROM pairings p
+JOIN rounds r ON p.round_id = r.round_id
+WHERE r.tournament_id = 16 AND r.round_number < 3 AND p.black_player_id iS NOT NULL;
+
+
+
+
+                SELECT 
+                    p.white_player_id AS player_id,
+                CASE 
+                    WHEN p.result = '1-0' THEN 1.0 
+                    WHEN p.result = '1/2-1/2' THEN 0.5 
+                    WHEN p.result = 'bye' THEN $1
+                    ELSE 0.0 
+                END AS points
+                FROM pairings p
+                JOIN rounds r ON p.round_id = r.round_id
+                WHERE r.tournament_id = $2 AND r.round_number < "$3"
+
+                UNION ALL
+
+                SELECT 
+                    p.black_player_id AS player_id,
+                CASE 
+                    WHEN p.result = '0-1' THEN 1.0 
+                    WHEN p.result = '1/2-1/2' THEN 0.5
+                    WHEN p.result = 'bye' THEN $1 
+                    ELSE 0.0 
+                END AS points
+                FROM pairings p
+                JOIN rounds r ON p.round_id = r.round_id
+                WHERE r.tournament_id = $2 AND r.round_number < $3 AND p.black_player_id iS NOT NULL;
