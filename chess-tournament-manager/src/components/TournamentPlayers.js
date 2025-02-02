@@ -16,6 +16,7 @@ const DisplayPlayers = () => {
     const [tournamentDetails, setTournamentDetails] = useState({}); 
 
     const [forbiddenPairs, setForbiddenPairs] = useState([]);
+    const [predefinedPairs, setPredefinedPairs] = useState([]);
 
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
@@ -99,7 +100,7 @@ const DisplayPlayers = () => {
     const [isModalOpenForbPairs, setIsModalOpenForbPairs] = useState(false);
 
     const openModalForbPairs = () => {
-        fetchForbiddenPairs();
+        fetchSpecialPairs("forbidden");
         setIsModalOpenForbPairs(true);
 
         setError("");
@@ -124,6 +125,38 @@ const DisplayPlayers = () => {
     const closeModalAddForbPair = () => {
         setIsModalOpenAddForbPair(false);
         openModalForbPairs();
+    };
+
+
+    //Predefined Pairs Modal
+    const [isModalOpenPredPairs, setIsModalOpenPredPairs] = useState(false);
+
+    const openModalPredPairs = () => {
+        fetchSpecialPairs("predefined");
+        setIsModalOpenPredPairs(true);
+
+        setError("");
+    };
+
+    const closeModalPredPairs = () => {
+        setIsModalOpenPredPairs(false);
+
+        setError("");
+    };
+
+
+    //Add Frobefined Pair Modal
+    const [isModalOpenAddPredPair, setIsModalOpenAddPredPair] = useState(false);
+
+
+    const openModalAddPredPair = () => {
+        setIsModalOpenAddPredPair(true);
+        closeModalPredPairs();
+    };
+
+    const closeModalAddPredPair = () => {
+        setIsModalOpenAddPredPair(false);
+        openModalPredPairs();
     };
 
     
@@ -152,7 +185,42 @@ const DisplayPlayers = () => {
         setExistingEmail("");
     };
 
+    //Fetch tournament details function
+    const requestTournamentDetails = async () => {
+        try {
+            //get sessionID from localStorage
+            const sessionID = localStorage.getItem("sessionID");
 
+            //send request to server
+            const response = await fetch(`http://localhost:5000/tournament/${tournamentId}/fetch-details`, {
+                method: "GET",
+                headers: { "Content-Type": "application/json", "Session-Id": sessionID },
+            });
+            //response from server
+            const server_resObject = await response.json();
+            
+
+            // if authorised -> set tournament details, else -> set error value and go to login page
+            if (server_resObject.success === true) {
+
+                setTournamentDetails(server_resObject.details);
+                
+            } else {
+
+                if (server_resObject.found === false) {
+                    localStorage.removeItem("sessionID");
+                    localStorage.setItem("globalMessage", server_resObject.message);
+                    navigate("/login");
+                } else {
+                    setError(server_resObject.message);
+                };
+            };
+
+        //catch any errors
+        } catch (err) {
+            console.error(err.message);
+        };
+    };
 
     const fetchPlayers = async () => {
         try {
@@ -168,8 +236,6 @@ const DisplayPlayers = () => {
             const server_resObject = await response.json();
 
             if (server_resObject.success === true) {
-
-                setTournamentDetails(server_resObject.tournament);
 
                 if (server_resObject.players.length !== 0) {
                     setListPlayersTable(server_resObject.players);
@@ -448,27 +514,39 @@ const DisplayPlayers = () => {
     };
 
 
-    
-
-
-  
-    const fetchForbiddenPairs = async () => {
+    const fetchSpecialPairs = async (type) => {
         try {
             const sessionID = localStorage.getItem("sessionID");
 
             //send request to server
-            const response = await fetch(`http://localhost:5000/tournament/${tournamentId}/fetch-forbidden-pairs`, {
-                method: "GET",
-                headers: { "Content-Type": "application/json", "Session-Id": sessionID },
-            });
+            let response = null;
+            if (type === "forbidden") {
+                response = await fetch(`http://localhost:5000/tournament/${tournamentId}/fetch-forbidden-pairs`, {
+                    method: "GET",
+                    headers: { "Content-Type": "application/json", "Session-Id": sessionID },
+                });
+
+            } else if (type === "predefined") {
+                response = await fetch(`http://localhost:5000/tournament/${tournamentId}/fetch-predefined-pairs`, {
+                    method: "GET",
+                    headers: { "Content-Type": "application/json", "Session-Id": sessionID },
+                });
+            };
 
             //response from server
+            if (response === null) {
+                return;
+            }
             const server_resObject = await response.json();
 
-
-            // if operation successful -> set tournament details
+            // if successful -> set special pairs
             if (server_resObject.success === true) {
-                setForbiddenPairs(server_resObject.forbidden_pairs);
+                if (type === "forbidden") {
+                    setForbiddenPairs(server_resObject.forbidden_pairs);
+                } else if (type === "predefined") {
+                    setPredefinedPairs(server_resObject.predefined_pairs);
+                };
+
             } else {
 
                 // if session expired -> remove sessionID and go to login page, else -> set error value
@@ -489,27 +567,40 @@ const DisplayPlayers = () => {
         };
     };
 
-    const removeForbiddenPair = (pair_id) => async () => {
-        console.log(pair_id)
-        
+    const removeSpecialPair = (pair_id, type) => async () => {
         try {
             const sessionID = localStorage.getItem("sessionID");
             const body = { pair_id: pair_id };
 
             //send request to server
-            const response = await fetch(`http://localhost:5000/tournament/${tournamentId}/remove-forbidden-pair`, {
-                method: "PUT",
-                headers: { "Content-Type": "application/json", "Session-Id": sessionID },
-                body: JSON.stringify(body),
-            });
+            let response = null;
+            if (type === "forbidden") {
+                response = await fetch(`http://localhost:5000/tournament/${tournamentId}/remove-forbidden-pair`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json", "Session-Id": sessionID },
+                    body: JSON.stringify(body),
+                });
+
+            } else if (type === "predefined") {
+                response = await fetch(`http://localhost:5000/tournament/${tournamentId}/remove-predefined-pair`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json", "Session-Id": sessionID },
+                    body: JSON.stringify(body),
+                });
+            };
 
             //response from server
+            if (response === null) {
+                console.log("response is null");
+                return;
+            };
             const server_resObject = await response.json();
 
 
             // if operation successful -> set tournament details
             if (server_resObject.success === true) {
-                fetchForbiddenPairs();
+                fetchSpecialPairs(type);
+
             } else {
 
                 // if session expired -> remove sessionID and go to login page, else -> set error value
@@ -531,7 +622,7 @@ const DisplayPlayers = () => {
     };
            
 
-    const addForbiddenPair = async () => {
+    const addSpecialPair = async (type) => {
         setError("");
 
          try{
@@ -542,19 +633,39 @@ const DisplayPlayers = () => {
                 player_2_id: player2ID
             }
 
-            const response = await fetch(`http://localhost:5000/tournament/${tournamentId}/add-forbidden-pair`, {
-                method: "PUT",
-                headers: { "Content-Type": "application/json", "Session-Id": sessionID },
-                body: JSON.stringify(body),
-            });
+            //send request to server
+            let response = null;
+            if (type === "forbidden") {
+                response = await fetch(`http://localhost:5000/tournament/${tournamentId}/add-forbidden-pair`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json", "Session-Id": sessionID },
+                    body: JSON.stringify(body),
+                });
 
+            } else if (type === "predefined") {
+                response = await fetch(`http://localhost:5000/tournament/${tournamentId}/add-predefined-pair`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json", "Session-Id": sessionID },
+                    body: JSON.stringify(body),
+                });
+            };
+
+            //response from server
+            if (response === null) {
+                return;
+            };
             const server_resObject = await response.json();
 
             if (server_resObject.success === true) {
-                closeModalAddForbPair();
-                fetchForbiddenPairs();
-            } else {
+                if (type === "forbidden") {
+                    closeModalAddForbPair();
+                } else if (type === "predefined") {
+                    closeModalAddPredPair();
+                };
+                fetchSpecialPairs(type);
 
+            } else {
+                // if session expired -> remove sessionID and go to login page, else -> set error value
                 if (server_resObject.found === false) {
                     localStorage.removeItem("sessionID");
                     localStorage.setItem("globalMessage", server_resObject.message);
@@ -565,7 +676,9 @@ const DisplayPlayers = () => {
                     setError(server_resObject.message);
                 }
             }
-         } catch (err) {
+
+        //catch any errors
+        } catch (err) {
             console.error(err.message);
         }
     };
@@ -589,6 +702,7 @@ const DisplayPlayers = () => {
 
     //fetch tournament details on page load and clear error and success messages, triggered by useEffect
     useEffect(() => {
+        requestTournamentDetails();
         fetchPlayers();
         setError("");
     }, []);
@@ -602,8 +716,9 @@ const DisplayPlayers = () => {
 
             <div>
 
-                <button onClick={openModalAddPlayer}>Add Player</button>
+                {tournamentDetails.status === "initialised" ? (<button onClick={openModalAddPlayer}>Add Player</button>) : (null)}
                 <button onClick={openModalForbPairs}>Forbidden Pairs</button>
+                <button onClick={openModalPredPairs}>Predefined Pairs</button>
 
                 {/*Table of Players*/}
                 <table style={{ border: "1px solid black" }}>
@@ -719,7 +834,7 @@ const DisplayPlayers = () => {
                     <button type="submit">Save</button> 
                 </form>
                 
-                <button onClick={openModalRemConf}>Remove Player</button>
+                {tournamentDetails.status === "initialised" ? (<button onClick={openModalRemConf}>Remove Player</button>) : (null)}
                    
             </Modal>
             
@@ -753,7 +868,8 @@ const DisplayPlayers = () => {
                                 <td>{index + 1}</td>
                                 <td>{forbPair.player_1_name}</td>
                                 <td>{forbPair.player_2_name}</td>
-                                <td><button onClick={removeForbiddenPair(forbPair.pair_id)}>Remove Pair</button></td>
+                                <td><button onClick={removeSpecialPair(forbPair.pair_id, "forbidden")}>Remove Pair</button></td>
+                                {/**() => removeSpecialPair(forbPair.pair_id, "forbidden") */}
                             </tr>
                         ))}
                     </tbody>
@@ -783,8 +899,61 @@ const DisplayPlayers = () => {
                     </select>
                 </label>
                 
-                <button onClick={addForbiddenPair}>Add</button>
+                <button onClick={() => addSpecialPair("forbidden")}>Add</button>
 
+            </Modal>
+
+            {/* Predefined Pairs Modal */}
+            <Modal isOpen={isModalOpenPredPairs} onClose={closeModalPredPairs} title="Predefined Pairs">
+                
+            <table>
+                <thead>
+                    <tr>
+                        <th>Num</th>
+                        <th>White</th>
+                        <th>Black</th>
+                        <th></th>
+                    </tr>
+                </thead>
+            
+                <tbody>
+                    {predefinedPairs.map((predPair, index) => (
+                        <tr key={predPair.pair_id}>
+                            <td>{index + 1}</td>
+                            <td>{predPair.player_1_name}</td>
+                            <td>{predPair.player_2_name}</td>
+                            <td><button onClick={removeSpecialPair(predPair.pair_id, "predefined")}>Remove Pair</button></td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+            
+            <button onClick={openModalAddPredPair}>Add Pair</button>
+            
+            </Modal>
+            
+            
+            {/* Add Predefined Pair Modal */}
+            <Modal isOpen={isModalOpenAddPredPair} onClose={closeModalAddPredPair} title="Add a Pair" errorDisplay={error}>
+            
+                <label> White:
+                    <select value={player1ID} onChange={(e) => setPlayer1ID(Number(e.target.value))} required>
+                        {listPlayersTable.map((player) => (
+                            <option key={player.player_id} value={player.player_id}>{player.name}</option>
+                        ))}
+                    </select>
+                </label>
+
+                <label> Black:
+                <select value={player2ID} onChange={(e) => setPlayer2ID(Number(e.target.value))} required>
+                    {listPlayersTable.map((player) => (
+                        <option key={player.player_id} value={player.player_id}>{player.name}</option>
+                    ))}
+                </select>
+                </label>
+
+                <button onClick={() => addSpecialPair("predefined")}>Add</button>
+            
             </Modal>
 
         </div>

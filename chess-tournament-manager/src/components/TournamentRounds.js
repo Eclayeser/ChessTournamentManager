@@ -2,12 +2,20 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
+//Import Modal component
+import Modal from "./ModalTemplate";
+
 // Create a functional component called RoundsDisplay
 const RoundsDisplay = () => {
 
     const [tournamentDetails, setTournamentDetails] = useState({});
     const [allRounds, setAllRounds] = useState([]);
     const [allSingleRoundPairings, setAllSingleRoundPairings] = useState([]);
+    const [currentRound, setCurrentRound] = useState(0);
+
+    const [pairingsResults, setPairingsResults] = useState({});
+
+    const [allPredefinedPairs, setAllPredefinedPairs] = useState([]);
 
     const { tournamentId } = useParams();
 
@@ -48,7 +56,48 @@ const RoundsDisplay = () => {
             console.error(err.message);
         };
     };   
+    
     // Create a new round with new pairings function (using tournament type from tournamentDetails and tournamentID)
+    const createNewRound = async () => {
+        try {
+            //get sessionID from localStorage
+            const sessionID = localStorage.getItem("sessionID");
+
+            const body = { result_object: pairingsResults };
+
+            //send request to server
+            const response = await fetch(`http://localhost:5000/tournament/${tournamentId}/create-round`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "Session-Id": sessionID },
+                body: JSON.stringify(body),
+            });
+
+            //response from server
+            const server_resObject = await response.json();
+
+            // if authorised -> set all rounds, else -> set error value and go to login page
+            if (server_resObject.success === true) {
+                fetchAllRounds();
+                fetchSingleRoundPairings(server_resObject.round_id);
+
+            } else {
+                
+                if (server_resObject.found === false) {
+                    localStorage.removeItem("sessionID");
+                    localStorage.setItem("globalMessage", server_resObject.message);
+                    navigate("/login");
+                } else {
+                    console.log(server_resObject.message);
+                }
+            };
+
+        //catch any errors
+        } catch (err) {
+            console.error(err.message);
+        };
+    };
+
+
 
     // Fetch all rounds function (using tournamentID)
     const fetchAllRounds = async () => {
@@ -103,7 +152,7 @@ const RoundsDisplay = () => {
             // if authorised -> set all pairings for the round, else -> set error value and go to login page
             if (server_resObject.success === true) {
                 setAllSingleRoundPairings(server_resObject.pairings);
-                console.log(server_resObject.pairings);
+                setCurrentRound(currentRound);
 
             } else {
 
@@ -126,7 +175,39 @@ const RoundsDisplay = () => {
     // Delete last round function (using roundID)
 
     // Predefined pairs functionality: create a pair, view pairs, delete pairs
-   
+    const fetchPredefinedPairs = async () => {
+        try {
+            //get sessionID from localStorage
+            const sessionID = localStorage.getItem("sessionID");
+
+            //send request to server
+            const response = await fetch(`http://localhost:5000/tournament/${tournamentId}/fetch-predefined-pairs`, {
+                method: "GET",
+                headers: { "Content-Type": "application/json", "Session-Id": sessionID },
+            });
+            //response from server
+            const server_resObject = await response.json();
+
+            // if authorised -> set all predefined pairs, else -> set error value and go to login page
+            if (server_resObject.success === true) {
+                setAllPredefinedPairs(server_resObject.predefined_pairs);
+
+            } else {
+
+                if (server_resObject.found === false) {
+                    localStorage.removeItem("sessionID");
+                    localStorage.setItem("globalMessage", server_resObject.message);
+                    navigate("/login");
+                } else {
+                    console.log(server_resObject.message);
+                };
+            };
+
+        //catch any errors
+        } catch (err) {
+            console.error(err.message);
+        };
+    };
 
     const startTournament = async () => {
         try {
@@ -162,6 +243,12 @@ const RoundsDisplay = () => {
         };
     };
 
+    // Set the result of a pairing function (using pairingID and result)
+    const setResult = (pairingID, result) => {
+        setPairingsResults({...pairingsResults, [pairingID]: result});
+        console.log(pairingsResults);
+    };
+
     useEffect(() => {
         //fetch data
         requestTournamentDetails();
@@ -171,7 +258,7 @@ const RoundsDisplay = () => {
 
     return (
         <div>
-            <h1>{tournamentDetails.name}: Standings</h1>
+            <h1>{tournamentDetails.name}: Rounds</h1>
 
             {tournamentDetails.status === "initialised" ? (
                 <div>
@@ -196,11 +283,11 @@ const RoundsDisplay = () => {
                                 <tr>
                                     <th>Position</th>
                                     <th>White Player</th>
-                                    <th>Rating</th>
+                                    {tournamentDetails.hide_rating ? (null):(<th>Rating</th>)}
                                     <th>Pts</th>
                                     <th>Result</th>
                                     <th>Pts</th>
-                                    <th>Rating</th>
+                                    {tournamentDetails.hide_rating ? (null):(<th>Rating</th>)}
                                     <th>Black Player</th>
                                 </tr>
                             </thead>
@@ -209,11 +296,28 @@ const RoundsDisplay = () => {
                                     <tr key={pairing.pairing_id}>
                                         <td>{index + 1}</td>
                                         <td>{pairing.white_player_name}</td>
-                                        <th>{pairing.white_player_rating}</th>
+                                        {tournamentDetails.hide_rating ? (null):(<th>{pairing.white_player_rating}</th>)}
                                         <td>{pairing.white_player_points}</td>
-                                        <td>{pairing.result}</td>
+
+                                        {currentRound === allRounds[allRounds.length - 1].round_id ? (
+                                            pairing.result === "bye" ? (
+                                                <td>{pairing.result}</td>
+                                            ) : (
+                                                <td>
+                                                    <select value={pairingsResults.round_id} onChange={(e) => setResult(pairing.pairing_id, e.target.value)}>
+                                                        <option value="-">-</option>
+                                                        <option value="1-0">1-0</option>
+                                                        <option value="1/2-1/2">1/2-1/2</option>
+                                                        <option value="0-1">0-1</option>
+                                                    </select>
+                                                </td>
+                                            )
+                                        ) : (
+                                            <td>{pairing.result}</td>
+)}
+                                        
                                         <td>{pairing.black_player_points}</td>
-                                        <th>{pairing.black_player_rating}</th>
+                                        {tournamentDetails.hide_rating ? (null):(<th>{pairing.black_player_rating}</th>)}
                                         <td>{pairing.black_player_name}</td>
                                     </tr>
                                 ))}
@@ -231,7 +335,7 @@ const RoundsDisplay = () => {
                 <button onClick={() => navigate(`/tournament/${tournamentId}/players`)}>Players</button>
                 <button onClick={() => navigate(`/tournament/${tournamentId}/rounds`)}>Rounds</button>
                 <button onClick={() => navigate(`/tournament/${tournamentId}/settings`)}>Settings</button>
-            </div>
+            </div>   
 
         </div>
     );

@@ -1568,6 +1568,54 @@ app.get("/tournament/:id/fetch-forbidden-pairs", async (req, res) => {
     }
 });
 
+//TournamentPlayers.js Component route: fetch all predefined pairs for this tournament
+app.get("/tournament/:id/fetch-predefined-pairs", async (req, res) => {
+    try {
+        //returning object
+        const resObject = {
+            success: false,
+            found: false,
+            message: "",
+            predefined_pairs: null
+        };
+
+
+        //verify that the request is authorised
+        const sessionID = req.headers["session-id"];
+        if (!sessionID || !sessions[sessionID]) {
+            resObject.message = "Session has expired";
+            return res.status(401).json(resObject);
+        }
+        resObject.found = true;
+
+        //get the id from the URL and verify it is an integer
+        const { id } = req.params;
+        if (isNaN(id)) {
+            resObject.message = "Invalid tournament ID";
+            return res.json(resObject);
+        };
+
+        //get the predefined pairs
+        const predefinedPairs = await pool.query(
+            `SELECT predefined.pair_id, predefined.white_player_id, p1.name AS player_1_name, predefined.black_player_id, p2.name AS player_2_name
+            FROM predefined
+            JOIN players p1 ON predefined.white_player_id = p1.player_id
+            JOIN players p2 ON predefined.black_player_id = p2.player_id
+            WHERE predefined.tournament_id = $1;`,
+            [id]
+        );
+
+        resObject.predefined_pairs = predefinedPairs.rows;
+        resObject.success = true;
+        resObject.message = "Predefined pairs have been found";
+        return res.json(resObject);
+
+    //catch any errors
+    } catch (err) {
+        console.error(err.message);
+    }
+});
+
 
 //TournamentPlayers.js Component Route: add forbidden pair
 app.put("/tournament/:id/add-forbidden-pair", async (req, res) => {
@@ -1637,6 +1685,73 @@ app.put("/tournament/:id/add-forbidden-pair", async (req, res) => {
     }
 });
 
+//TournamentPlayers.js Component Route: add predefined pair
+app.put("/tournament/:id/add-predefined-pair", async (req, res) => {
+    try {
+        //returning object
+        const resObject = {
+            found: false,
+            success: false,
+            message: ""
+        };
+
+        //verify that the request is authorised
+        const sessionID = req.headers["session-id"];
+        if (!sessionID || !sessions[sessionID]) {
+            resObject.message = "Session has expired";
+            return res.status(401).json(resObject);
+        };
+        resObject.found = true;
+
+        //get the id from the URL and verify it is an integer
+        const { id } = req.params;
+        if (isNaN(id)) {
+            resObject.message = "Invalid tournament ID";
+            return res.json(resObject);
+        };
+
+        //passed variables
+        const { player_1_id, player_2_id } = req.body;
+
+        //check if empty or null or not integers
+        if (!player_1_id || !player_2_id || isNaN(player_1_id) || isNaN(player_2_id)) {
+            resObject.message = "Invalid player IDs";
+            return res.json(resObject);
+        };
+
+
+        //check if the players are the same
+        if (player_1_id === player_2_id) {
+            resObject.message = "Players cannot be the same";
+            return res.json(resObject);
+        };
+
+        //check that pair already exists
+        const existingPair = await pool.query(
+            "SELECT * FROM predefined WHERE tournament_id = $1 AND (white_player_id = $2 OR black_player_id = $3 OR white_player_id = $3 OR black_player_id = $2);",
+            [id, player_1_id, player_2_id]
+        );
+
+        if (existingPair.rows.length > 0) {
+            resObject.message = "One of the players is already in a predefined pair";
+            return res.json(resObject);
+        };
+
+        //add a predefined pair
+        const addPredefinedPair = await pool.query(
+            "INSERT INTO predefined (tournament_id, white_player_id, black_player_id) VALUES ($1, $2, $3);",
+            [id, player_1_id, player_2_id]
+        );
+
+          
+        resObject.success = true;
+        resObject.message = "Predefined pair has been added";
+        return res.json(resObject);
+
+    } catch (err) {
+        console.error(err.message);
+    }
+});
 
 //TournamentPlayers.js Component Route: remove forbidden pair
 app.put("/tournament/:id/remove-forbidden-pair", async (req, res) => {
@@ -1678,6 +1793,53 @@ app.put("/tournament/:id/remove-forbidden-pair", async (req, res) => {
           
         resObject.success = true;
         resObject.message = "Forbidden pair has been removed";
+        return res.json(resObject);
+
+    } catch (err) {
+        console.error(err.message);
+    }
+});
+
+//TournamentPlayers.js Component Route: remove predefined pair
+app.put("/tournament/:id/remove-predefined-pair", async (req, res) => {
+    try {
+        //returning object
+        const resObject = {
+            found: false,
+            success: false,
+            message: ""
+        };
+
+        //verify that the request is authorised
+        const sessionID = req.headers["session-id"];
+        if (!sessionID || !sessions[sessionID]) {
+            resObject.message = "Session has expired";
+            return res.status(401).json(resObject);
+        }
+        resObject.found = true;
+
+        //get the id from the URL and verify it is an integer
+        const { id } = req.params;
+        if (isNaN(id)) {
+            resObject.message = "Invalid tournament ID";
+            return res.json(resObject);
+        };
+
+        //passed variables
+        const { pair_id } = req.body;
+        if (!pair_id || isNaN(pair_id)) {
+            resObject.message = "Invalid pair ID";
+            return res.json(resObject);
+        };
+
+        //remove a predefined pair
+        const removePredefinedPair = await pool.query(
+            "DELETE FROM predefined WHERE pair_id = $1;",
+            [pair_id]
+        );
+          
+        resObject.success = true;
+        resObject.message = "Predefined pair has been removed";
         return res.json(resObject);
 
     } catch (err) {
@@ -1837,4 +1999,6 @@ app.get("/tournament/:id/fetch-round-pairings/:round_id", async (req, res) => {
         console.error(err.message);
     }
 });
+
+
 

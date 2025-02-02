@@ -217,7 +217,7 @@ const TournamentSettings = () => {
                 </label>
 
                 <label> Number of Rounds:
-                    { (tournament.type === "Knockout" || tournament.type === "Round-robin") ? (
+                    {(tournament.type === "Knockout" || tournament.type === "Round-robin" || tournament.status !== "initialised") ? (
                         <input type="number" value={maxRounds} disabled />
                     ) : (
                         <input type="number" value={maxRounds} onChange={(e) => setMaxRounds(Number(e.target.value))} min={1} max={50} required />
@@ -225,7 +225,11 @@ const TournamentSettings = () => {
                 </label>
 
                 <label> Maximum Players:
-                    <input type="number" value={maxParticipants} onChange={(e) => setMaxParticipants(Number(e.target.value))} min={1} max={1000} required />
+                    {(tournament.status !== "initialised") ? (
+                        <input type="number" value={maxParticipants} disabled />
+                    ) : (
+                        <input type="number" value={maxParticipants} onChange={(e) => setMaxParticipants(Number(e.target.value))} min={1} max={1000} required />
+                    )}
                 </label>
 
                 <label> Tournament Type:
@@ -233,7 +237,7 @@ const TournamentSettings = () => {
                 </label>
 
                 <label> Bye Value:
-                    {(tournament.type === "Knockout" || tournament.type === "Round-robin") ? (
+                    {(tournament.type === "Knockout" || tournament.type === "Round-robin" || tournament.status !== "initialised") ? (
                         <input type="number" value={byeVal} disabled />
                     ) : (
                         <select value={byeVal} onChange={(e) => setByeVal(Number(e.target.value))} required>
