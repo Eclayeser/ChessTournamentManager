@@ -398,23 +398,24 @@ async function getPlayerOpponents(tournamentId) {
     } catch (error) {
         console.error(error);
     }
-}
+};
 
 
-async function getPlayerPointsUntilRound(byeValue, tournamentId, roundNumber) {
+//Function: form a list of player ids with their total points
+async function getPlayerCumulativePoints(byeValue, tournamentId, roundNumber) {
     try {
         const result = await pool.query(`
                 SELECT 
                     p.white_player_id AS player_id,
-                CASE 
-                    WHEN p.result = '1-0' THEN 1.0 
-                    WHEN p.result = '1/2-1/2' THEN 0.5 
-                    WHEN p.result = 'bye' THEN $1
-                    ELSE 0.0 
-                END AS points
+                    CASE 
+                        WHEN p.result = '1-0' THEN 1.0 
+                        WHEN p.result = '1/2-1/2' THEN 0.5 
+                        WHEN p.result = 'bye' THEN $1
+                        ELSE 0.0 
+                    END AS points
                 FROM pairings p
                 JOIN rounds r ON p.round_id = r.round_id
-                WHERE r.tournament_id = $2 AND r.round_number < "$3"
+                WHERE r.tournament_id = $2 AND r.round_number < $3
 
                 UNION ALL
 
@@ -443,15 +444,8 @@ async function getPlayerPointsUntilRound(byeValue, tournamentId, roundNumber) {
         return playerPoints;
     } catch (error) {
         console.error(error);
-    }
-}
-
-
-(async () => {
-    const tournamentId = 16; // Replace with actual tournament ID
-    const listP = await getPlayerPointsUntilRound(5.0, tournamentId, 3);
-    console.log(listP);
-  })();
+    };
+};
 
 
 //ROUTES//
@@ -1784,27 +1778,59 @@ app.get("/tournament/:id/fetch-round-pairings/:round_id", async (req, res) => {
             pairings: null
         };
 
+        //verify that the request is authorised
+        const sessionID = req.headers["session-id"];
+        if (!sessionID || !sessions[sessionID]) {
+            resObject.message = "Session has expired";
+            return res.status(401).json(resObject);
+        }
+        resObject.found = true;
+
+
         //get the id from the URL and verify it is an integer
-        const { id, round_number } = req.params;
-        if (isNaN(id) || isNaN(round_number)) {
-            resObject.message = "Invalid tournament ID or round number";
+        const { id, round_id } = req.params;
+        if (isNaN(id) || isNaN(round_id)) {
+            resObject.message = "Invalid tournament ID or round ID";
             return res.json(resObject);
         };
 
-        //get the pairings
-        const pairings = await pool.query(
-            `SELECT pairings.pairing_id, pairings.player_1_id, p1.name AS player_1_name, pairings.player_2_id, p2.name AS player_2_name, pairings.result
-            FROM pairings
-            JOIN players p1 ON pairings.player_1_id = p1.player_id
-            JOIN players p2 ON pairings.player_2_id = p2.player_id
-            WHERE pairings.tournament_id = $1 AND pairings.round_id = $2
-            ORDER BY pairings.pairing_id;`,
-            [id, round_number]
-        );
 
-        resObject.pairings = pairings.rows;
-        resObject.success = true;
+        // Get cumulative points for all players
+        const playerPoints = await getPlayerCumulativePoints(0.0, id, round_id);
+
+        
+        const result = await pool.query(`
+                SELECT p.pairing_id, p.white_player_id, p.black_player_id, p.round_id, r.round_number, p.result,
+                    wp.name AS white_player_name, wp.rating AS white_player_rating,
+                    bp.name AS black_player_name, bp.rating AS black_player_rating
+                FROM pairings p
+                JOIN rounds r ON p.round_id = r.round_id
+                JOIN players wp ON p.white_player_id = wp.player_id
+                LEFT JOIN players bp ON p.black_player_id = bp.player_id
+                WHERE p.round_id = $1 AND r.tournament_id = $2;`, 
+            [round_id, id]);
+        
+
+        let pairingsList = [];
+
+        result.rows.forEach(row => {
+            pairingsList.push({
+                pairing_id: row.pairing_id,
+                white_player_id: row.white_player_id,
+                white_player_name: row.white_player_name,
+                white_player_rating: row.white_player_rating,
+                white_player_points: playerPoints[row.white_player_id],
+                black_player_id: row.black_player_id,
+                black_player_name: row.black_player_name,
+                black_player_rating: row.black_player_rating,
+                black_player_points: playerPoints[row.black_player_id],
+                result: row.result
+            });
+        });
+
+        resObject.success = true; 
         resObject.message = "Pairings have been found";
+        resObject.pairings = pairingsList;
         return res.json(resObject);
 
     } catch (err) {
@@ -1812,48 +1838,3 @@ app.get("/tournament/:id/fetch-round-pairings/:round_id", async (req, res) => {
     }
 });
 
-
-async function getPlayerPointsUntilRound(tournamentId, roundNumber) {
-  const query = `
-    SELECT 
-      p.white_player_id AS player_id,
-      CASE 
-        WHEN p.result = '1-0' THEN 1.0 
-        WHEN p.result = '1/2-1/2' THEN 0.5 
-        ELSE 0.0 
-      END AS points
-    FROM pairings p
-    JOIN rounds r ON p.round_id = r.round_id
-    WHERE r.tournament_id = $1 AND r.round_number < $2
-    
-    UNION ALL
-    
-    SELECT 
-      p.black_player_id AS player_id,
-      CASE 
-        WHEN p.result = '0-1' THEN 1.0 
-        WHEN p.result = '1/2-1/2' THEN 0.5 
-        ELSE 0.0 
-      END AS points
-    FROM pairings p
-    JOIN rounds r ON p.round_id = r.id
-    WHERE r.tournament_id = $1 AND r.round_number <= $2;
-  `;
-
-  try {
-    const result = await pool.query(query, [tournamentId, roundNumber]);
-    const playerPoints = {};
-
-    result.rows.forEach(({ player_id, points }) => {
-      if (!playerPoints[player_id]) {
-        playerPoints[player_id] = 0.0;
-      }
-      playerPoints[player_id] += parseFloat(points);
-    });
-
-    return playerPoints;
-  } catch (error) {
-    console.error("Error executing query", error);
-    throw error;
-  }
-}

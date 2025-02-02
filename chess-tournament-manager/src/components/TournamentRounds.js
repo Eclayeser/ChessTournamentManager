@@ -103,6 +103,7 @@ const RoundsDisplay = () => {
             // if authorised -> set all pairings for the round, else -> set error value and go to login page
             if (server_resObject.success === true) {
                 setAllSingleRoundPairings(server_resObject.pairings);
+                console.log(server_resObject.pairings);
 
             } else {
 
@@ -205,18 +206,12 @@ const RoundsDisplay = () => {
                             </thead>
                             <tbody>
                                 {allSingleRoundPairings.map((pairing, index) => (
-                                    <tr key={index}>
+                                    <tr key={pairing.pairing_id}>
                                         <td>{index + 1}</td>
                                         <td>{pairing.white_player_name}</td>
                                         <th>{pairing.white_player_rating}</th>
                                         <td>{pairing.white_player_points}</td>
-                                        <td>
-                                            <select>
-                                                <option value="1">1-0</option>
-                                                <option value="2">1/2-1/2</option>
-                                                <option value="3">0-1</option>
-                                            </select>
-                                        </td>
+                                        <td>{pairing.result}</td>
                                         <td>{pairing.black_player_points}</td>
                                         <th>{pairing.black_player_rating}</th>
                                         <td>{pairing.black_player_name}</td>
