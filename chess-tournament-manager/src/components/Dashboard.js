@@ -79,7 +79,7 @@ const DisplayDashboard = () => {
             <ul>
                 {tournaments.map((tournament) => (
                     <li key={tournament.tournament_id} onClick={() => goToTournament(tournament.tournament_id)}>
-                        {tournament.name}
+                        {tournament.name} ------------------- {tournament.status}
                     </li>
                 ))}
             </ul>

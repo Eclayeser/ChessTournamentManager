@@ -169,7 +169,7 @@ CREATE TABLE forbidden(
 CREATE TABLE predefined(
     pair_id SERIAL PRIMARY KEY,            --field for pair ID, autoincrement, primary key
     white_player_id INT REFERENCES players(player_ID) ON DELETE CASCADE NOT NULL, --field for white player ID, foreign key, not null
-    blak_player_id INT REFERENCES players(player_ID) ON DELETE CASCADE NOT NULL, --field for black player ID, foreign key, not null
+    black_player_id INT REFERENCES players(player_ID) ON DELETE CASCADE NOT NULL, --field for black player ID, foreign key, not null
     tournament_id INT REFERENCES tournaments(tournament_ID) ON DELETE CASCADE NOT NULL --field for tournament ID, foreign key, not null
 );
 
@@ -207,16 +207,18 @@ ADD COLUMN password VARCHAR(30) NOT NULL,
 ADD COLUMN firstname VARCHAR(30) NOT NULL,
 ADD COLUMN surname VARCHAR(30) NOT NULL;
 
-ALTER TABLE pairings
-DROP COLUMN result;
+ALTER TABLE predefined
+DROP COLUMN blak_player_id,
+DROP COLUMN tournament_id;
 
 
 ALTER TABLE tournaments
 ADD COLUMN max_participants SMALLINT CHECK (max_participants > 0 AND max_participants <= 1000),
 ADD COLUMN max_rounds SMALLINT CHECK (max_rounds > 0 AND max_rounds <= 1000);
 
-ALTER TABLE tournaments
-ADD COLUMN forbidden INTEGER[][]; 
+ALTER TABLE predefined
+ADD COLUMN black_player_id INT REFERENCES players(player_ID) ON DELETE CASCADE NOT NULL,
+ADD COLUMN tournament_id INT REFERENCES tournaments(tournament_ID) ON DELETE CASCADE NOT NULL;
 
 ALTER TABLE users
 ADD COLUMN email VARCHAR(50) NOT NULL;

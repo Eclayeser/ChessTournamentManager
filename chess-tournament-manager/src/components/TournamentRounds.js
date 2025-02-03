@@ -1,25 +1,41 @@
 // Import necessary libraries and hooks
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { saveAs } from 'file-saver'; 
 
 //Import Modal component
 import Modal from "./ModalTemplate";
+
 
 // Create a functional component called RoundsDisplay
 const RoundsDisplay = () => {
 
     const [tournamentDetails, setTournamentDetails] = useState({});
+
+
     const [allRounds, setAllRounds] = useState([]);
+    const [lastRoundNumber, setLastRoundNumber] = useState(0);
+
     const [allSingleRoundPairings, setAllSingleRoundPairings] = useState([]);
+    
     const [currentRound, setCurrentRound] = useState(0);
 
     const [pairingsResults, setPairingsResults] = useState({});
 
-    const [allPredefinedPairs, setAllPredefinedPairs] = useState([]);
-
     const { tournamentId } = useParams();
 
     const navigate = useNavigate();
+
+    //Finish Tournament Confirmation Modal
+    const [isModalOpenFinishConf, setIsModalOpenFinishConf] = useState(false);
+
+    const openModalFinishConf = () => {
+        setIsModalOpenFinishConf(true);
+    };
+
+    const closeModalFinishConf = () => {
+        setIsModalOpenFinishConf(false);
+    };
 
     // Fetch the tournament details function (using tournamentID)
     const requestTournamentDetails = async () => {
@@ -57,7 +73,7 @@ const RoundsDisplay = () => {
         };
     };   
     
-    // Create a new round with new pairings function (using tournament type from tournamentDetails and tournamentID)
+    // Save the results of all pairings in a single round function (using result, pairingsID and roundID), Create a new round with new pairings function (using tournament type from tournamentDetails and tournamentID)
     const createNewRound = async () => {
         try {
             //get sessionID from localStorage
@@ -79,6 +95,7 @@ const RoundsDisplay = () => {
             if (server_resObject.success === true) {
                 fetchAllRounds();
                 fetchSingleRoundPairings(server_resObject.round_id);
+                currentRound(server_resObject.round_id);
 
             } else {
                 
@@ -97,8 +114,6 @@ const RoundsDisplay = () => {
         };
     };
 
-
-
     // Fetch all rounds function (using tournamentID)
     const fetchAllRounds = async () => {
         try {   
@@ -116,6 +131,8 @@ const RoundsDisplay = () => {
             // if authorised -> set all rounds, else -> set error value and go to login page
             if (server_resObject.success === true) {
                 setAllRounds(server_resObject.rounds);
+                setLastRoundNumber(server_resObject.rounds[server_resObject.rounds.length - 1].round_number);
+                console.log(server_resObject.rounds[server_resObject.rounds.length - 1].round_number);
 
             } else {
                 
@@ -154,6 +171,17 @@ const RoundsDisplay = () => {
                 setAllSingleRoundPairings(server_resObject.pairings);
                 setCurrentRound(currentRound);
 
+                //set pairingsResult to have "-" for all pairings except the bye ones if the current round is the last round
+                if (currentRound === lastRoundNumber) {
+                    const resultObject = {};
+                    server_resObject.pairings.forEach(pairing => {
+                        if (pairing.result !== "bye") {
+                            resultObject[pairing.pairing_id] = "-";
+                        };
+                    });
+                    setPairingsResults(resultObject);
+                }
+
             } else {
 
                 if (server_resObject.found === false) {
@@ -171,43 +199,27 @@ const RoundsDisplay = () => {
         };
     };
 
-    // Save the results of all pairings in a single round function (using result, pairingsID and roundID)
     // Delete last round function (using roundID)
 
-    // Predefined pairs functionality: create a pair, view pairs, delete pairs
-    const fetchPredefinedPairs = async () => {
-        try {
-            //get sessionID from localStorage
-            const sessionID = localStorage.getItem("sessionID");
-
-            //send request to server
-            const response = await fetch(`http://localhost:5000/tournament/${tournamentId}/fetch-predefined-pairs`, {
-                method: "GET",
-                headers: { "Content-Type": "application/json", "Session-Id": sessionID },
+    //Save CSV
+    const saveCSV = () => {
+            //convert table to csv
+            const rows = document.querySelectorAll("table tr");
+            let csvContent = "";
+    
+            rows.forEach(row => {
+                const cols = row.querySelectorAll("td, th");
+                const rowData = Array.from(cols).map(col => col.innerText).join(",");
+                csvContent += rowData + "\n";
             });
-            //response from server
-            const server_resObject = await response.json();
-
-            // if authorised -> set all predefined pairs, else -> set error value and go to login page
-            if (server_resObject.success === true) {
-                setAllPredefinedPairs(server_resObject.predefined_pairs);
-
-            } else {
-
-                if (server_resObject.found === false) {
-                    localStorage.removeItem("sessionID");
-                    localStorage.setItem("globalMessage", server_resObject.message);
-                    navigate("/login");
-                } else {
-                    console.log(server_resObject.message);
-                };
-            };
-
-        //catch any errors
-        } catch (err) {
-            console.error(err.message);
+    
+            //download csv file
+            const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+            saveAs(blob, `tournament_round_${currentRound}.csv`);
         };
-    };
+
+    //Finish Tournament
+
 
     const startTournament = async () => {
         try {
@@ -243,6 +255,42 @@ const RoundsDisplay = () => {
         };
     };
 
+    const finishTournament = async () => {
+        try {
+            //get sessionID from localStorage
+            const sessionID = localStorage.getItem("sessionID");
+
+            //send request to server
+            const response = await fetch(`http://localhost:5000/tournament/${tournamentId}/finish`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json", "Session-Id": sessionID },
+            });
+            //response from server
+            const server_resObject = await response.json();
+
+            // if authorised -> set tournament details, else -> set error value and go to login page
+            if (server_resObject.success === true) {
+                requestTournamentDetails();
+                closeModalFinishConf();
+
+            } else {
+
+                if (server_resObject.found === false) {
+                    localStorage.removeItem("sessionID");
+                    localStorage.setItem("globalMessage", server_resObject.message);
+                    navigate("/login");
+                } else {
+                    console.log(server_resObject.message);
+                };
+            };
+
+        //catch any errors
+        } catch (err) {
+            console.error(err.message);
+        };
+    };
+
+
     // Set the result of a pairing function (using pairingID and result)
     const setResult = (pairingID, result) => {
         setPairingsResults({...pairingsResults, [pairingID]: result});
@@ -260,6 +308,10 @@ const RoundsDisplay = () => {
         <div>
             <h1>{tournamentDetails.name}: Rounds</h1>
 
+            {(currentRound === 0 && tournamentDetails.status !== "initialised") ? (
+                <h2>Generate new round OR select from existing rounds</h2>
+            ) : (null)}
+
             {tournamentDetails.status === "initialised" ? (
                 <div>
                     <h2>Begin the tournament:</h2>
@@ -273,6 +325,13 @@ const RoundsDisplay = () => {
                         {allRounds.map((round) => (
                             <button key={round.round_id} onClick={() => fetchSingleRoundPairings(round.round_id)}>Round {round.round_number}</button>
                         ))}
+                    </div>
+
+                    <div>
+                        {/**onClick={createNewRound} */}
+                        {(currentRound === lastRoundNumber && tournamentDetails.status !== "finished") ? (
+                            <button>Generate Next Round</button>
+                        ) : (null)}
                     </div>
 
                     {/* Display the table of pairings */} 
@@ -303,6 +362,9 @@ const RoundsDisplay = () => {
                                             pairing.result === "bye" ? (
                                                 <td>{pairing.result}</td>
                                             ) : (
+                                                tournamentDetails.status === "finished" ? (
+                                                    <td>{pairing.result}</td>
+                                                ) : (
                                                 <td>
                                                     <select value={pairingsResults.round_id} onChange={(e) => setResult(pairing.pairing_id, e.target.value)}>
                                                         <option value="-">-</option>
@@ -311,7 +373,7 @@ const RoundsDisplay = () => {
                                                         <option value="0-1">0-1</option>
                                                     </select>
                                                 </td>
-                                            )
+                                            ))
                                         ) : (
                                             <td>{pairing.result}</td>
 )}
@@ -324,7 +386,12 @@ const RoundsDisplay = () => {
                             </tbody>
                         </table>
 
-                        <button>Save CSV</button>
+                        <button onClick={saveCSV}>Save CSV</button>
+
+                        <br></br>
+                        {(currentRound === lastRoundNumber && tournamentDetails.status !== "finished") ? (
+                            <button onClick={openModalFinishConf}>Finish Tournament</button>
+                        ) : (null)}
 
                     </div>
                 </div>  
@@ -335,7 +402,17 @@ const RoundsDisplay = () => {
                 <button onClick={() => navigate(`/tournament/${tournamentId}/players`)}>Players</button>
                 <button onClick={() => navigate(`/tournament/${tournamentId}/rounds`)}>Rounds</button>
                 <button onClick={() => navigate(`/tournament/${tournamentId}/settings`)}>Settings</button>
-            </div>   
+            </div> 
+
+            {/* Finish Tournament Confirmation Pop-up */}
+            <Modal isOpen={isModalOpenFinishConf} onClose={closeModalFinishConf} title="Finish This Tournament">
+                
+                <h3>Are you sure you want to finish this tournament tournament?</h3>
+                <p> No more rounds will be generated or deleted.</p>
+                <button onClick={finishTournament}>Confirm</button>
+                <button onClick={closeModalFinishConf}>Cancel</button>
+
+            </Modal>  
 
         </div>
     );

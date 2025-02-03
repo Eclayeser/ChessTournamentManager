@@ -717,8 +717,14 @@ const DisplayPlayers = () => {
             <div>
 
                 {tournamentDetails.status === "initialised" ? (<button onClick={openModalAddPlayer}>Add Player</button>) : (null)}
-                <button onClick={openModalForbPairs}>Forbidden Pairs</button>
-                <button onClick={openModalPredPairs}>Predefined Pairs</button>
+
+                {tournamentDetails.status !== "finished" ?(
+                    <div>
+                        <button onClick={openModalForbPairs}>Forbidden Pairs</button>
+                        <button onClick={openModalPredPairs}>Predefined Pairs</button>
+                    </div>
+                ):(null)}
+                
 
                 {/*Table of Players*/}
                 <table style={{ border: "1px solid black" }}>
