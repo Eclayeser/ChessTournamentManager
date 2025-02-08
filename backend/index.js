@@ -448,6 +448,89 @@ async function getPlayersCumulativePoints(byeValue, tournamentId, roundNumber) {
 };
 
 
+//Function: validate and update results //return {funcSuccess: success, funcMessage: message}
+async function updateAllResults(resultsArray, tournamentID){
+    let error = null
+    let message = "";
+    let success = null;
+
+    //Validate
+    resultsArray.forEach(([pairing_id, result]) => {
+        if (isNaN(pairing_id) || (result !== "1-0" && result !== "0-1" && result !== "1/2-1/2" && result !== "-")){
+            console.log("entered");
+            message = "Invalid result details";
+            success = false;
+            error = true;
+        };
+    });
+    if (error === true){
+        return {funcSuccess: success, funcMessage: message};
+    };
+
+
+    //prepare query statement
+    let cases_list = []
+    let ids_list = []
+    resultsArray.forEach(([pairing_id, result]) => {
+            cases_list.push(`WHEN pairing_id = ${pairing_id} THEN '${result}'`);
+            ids_list.push(pairing_id); 
+        });
+
+    const update_results_query = `
+        UPDATE pairings 
+        SET result = CASE
+            ${cases_list.join(' ')}
+            ELSE result
+        END
+        WHERE pairing_id IN (${ids_list.join(', ')});
+    `;
+
+    //sent request
+    try {
+        const setResults = await pool.query(update_results_query);
+
+    } catch(err) {
+        console.error("Database update failed:", err);
+        message = err.message
+        success = false;
+        return {funcSuccess: success, funcMessage: message}
+    };
+
+    //check that the round does not have any unplayed games
+    const check_unplayed_query = `
+        SELECT * FROM pairings
+        WHERE round_id = (
+            SELECT round_id 
+            FROM rounds 
+            WHERE tournament_id = $1
+            ORDER BY round_number DESC
+            LIMIT 1
+        )
+        AND result = '-';
+    `;
+
+    try {
+        const checkUnplayed = await pool.query(check_unplayed_query, [tournamentID]);
+        if (checkUnplayed.rows.length > 0){
+            message = "Unable to finish: last round has unplayed games";
+            success = false;
+            return {funcSuccess: success, funcMessage: message}
+        };
+
+    } catch(err) {
+        console.error("Database check failed:", err);
+        message = err.message
+        success = false;
+        return {funcSuccess: success, funcMessage: message}
+    };
+
+    
+    success = true;
+    return {funcSuccess: success, funcMessage: message}
+};
+
+
+
 //ROUTES//
 
 //Check Session Route
@@ -2031,30 +2114,45 @@ app.get("/tournament/:id/fetch-round-pairings/:round_id", async (req, res) => {
 });
 
 app.put("/tournament/:id/finish", async (req, res) => {
-    ///ALSO SET LAST RESULTS
+
+    //returning object
+    const resObject = {
+        found: false,
+        success: false,
+        message: ""
+    };
+
+    //verify that the request is authorised
+    const sessionID = req.headers["session-id"];
+    if (!sessionID || !sessions[sessionID]) {
+        resObject.message = "Session has expired";
+        return res.status(401).json(resObject);
+    }
+    resObject.found = true;
+
+    //get the id from the URL and verify it is an integer
+    const { id } = req.params;
+    if (isNaN(id)) {
+        resObject.message = "Invalid tournament ID";
+        return res.json(resObject);
+    };
+
+    //update results
+    const { results_object } = req.body;
+    results_array = Object.entries(results_object);
+    
     try {
-        //returning object
-        const resObject = {
-            found: false,
-            success: false,
-            message: ""
-        };
-
-        //verify that the request is authorised
-        const sessionID = req.headers["session-id"];
-        if (!sessionID || !sessions[sessionID]) {
-            resObject.message = "Session has expired";
-            return res.status(401).json(resObject);
-        }
-        resObject.found = true;
-
-        //get the id from the URL and verify it is an integer
-        const { id } = req.params;
-        if (isNaN(id)) {
-            resObject.message = "Invalid tournament ID";
+        const operationReturn = await updateAllResults(results_array, id);
+        if (operationReturn.funcSuccess === false){
+            resObject.message = operationReturn.funcMessage;
             return res.json(resObject);
         };
-        
+
+    } catch (err) {
+        console.error("Error updating results: ", err.message);
+    };
+
+    try {  
         //finish the tournament
         const finishTournament = await pool.query(
             "UPDATE tournaments SET status = $1 WHERE tournament_id = $2",
@@ -2066,8 +2164,10 @@ app.put("/tournament/:id/finish", async (req, res) => {
         return res.json(resObject);
 
     } catch (err) {
-        console.error(err.message);
+        console.error("Error finishing tournament: ", err.message);
     };
+
+    
 });
 
 /* REDO

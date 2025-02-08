@@ -1,109 +1,204 @@
+//test
 
-/*//TournamentRounds.js Component Route: create new round
-app.post("/tournament/:id/create-round", async (req, res) => {
+// import pool
+const pool = require("./database");
+
+//Function: validate and update results //return {funcSuccess: success, funcMessage: message}
+async function updateAllResults(resultsArray, tournamentID, type){
+    let error = null
+    let message = "";
+    let success = null;
+
+    //authoris////////////
+    //validate
+    if (isNaN(id)) {
+        resObject.message = "Invalid user id";
+        return resObject;
+    };
+
     try {
-        //returning object
-        const resObject = {
-            success: false,
-            found: false,
-            message: "",
-            round_id: null
+        //form a list of corresponding pairing ids to given user id
+        `
+        SELECT tournaments.type, tournaments.max_rounds, COUNT(rounds.round_id)
+                    FROM tournaments
+                    JOIN rounds
+                    ON tournaments.tournament_id = rounds.tournament_id
+                    WHERE rounds.tournament_id = $1 GROUP BY tournaments.type, tournaments.max_rounds;
+                    `
+
+    } catch (err) {
+        //catch errors
+    }
+
+    //compare pairings requested to the list; continue if each matches the one in the list
+
+
+
+    //Validate
+    resultsArray.forEach(([pairing_id, result]) => {
+        if (isNaN(pairing_id) || (result !== "1-0" && result !== "0-1" && result !== "1/2-1/2" && result !== "-")){
+            console.log("entered");
+            message = "Invalid result details";
+            success = false;
+            error = true;
         };
-
-        //verify that the request is authorised
-        const sessionID = req.headers["session-id"];
-        if (!sessionID || !sessions[sessionID]) {
-            resObject.message = "Session has expired";
-            return res.status(401).json(resObject);
-        }
-        resObject.found = true;
+    });
+    if (error === true){
+        return {funcSuccess: success, funcMessage: message};
+    };
 
 
-        //get the id from the URL and verify it is an integer
-        const { id } = req.params;
-        if (isNaN(id)) {
-            resObject.message = "Invalid tournament ID";
-            return res.json(resObject);
-        };
-
-        ////////////////////get some essential tournament details for type distinquishing and round number, verify doesn;t break maximum/////////////////////////////////////////////
-        const generatingDetails = await pool.query(`
-            SELECT tournaments.type, tournaments.max_rounds, MAX(rounds.round_number)
-            FROM tournaments
-            JOIN rounds
-            ON tournaments.tournament_id = rounds.tournament_id
-            WHERE rounds.tournament_id = $1 GROUP BY tournaments.type, tournaments.max_rounds;
-            `,
-            [id])
-        
-        //get type
-        const tournamentType = generatingDetails.rows[0].type
-        //get round number
-        const currentRound = generatingDetails.rows[0].max
-        console.log("Current Round Number: ", currentRound);
-        //verify round number is not equal or greater than max_rounds (not supposed to happen only if front-end modified)
-        if (currentRound >= generatingDetails.rows[0].max_rounds){
-            resObject.message = "Maximum number of rounds reached";
-            return res.json(resObject); 
-        };
-
-        console.log("GeneratingTournament Details fetched")
-
-        ////////////////////manage the results and eliminated statuses////////////////////////////////////////////////////////////////
-
-        //passed values (results)
-        const { result_object } = req.body; //{"id": "result", ...}
-
-        //validate results to be only 1-0, 0-1, 1/2-1/2
-        results = Object.values(result_object)
-
-                    //eliminate_players = []  // [ {"id": id1, }] // if drawn, do not eliminate
-
-        for (const single_result of results){
-            if (single_result !== "1-0" && single_result !== "0-1" && single_result !== "1/2-1/2" ) {
-                resObject.message = "Provide all the results before generating new round";
-                return res.json(resObject); 
-            };
-
-            //for Knockout
-            //if (tournamentType === "Knockout"){
-                //construct a list of eliminated players
-            //};
-        };
-        console.log("Results validation passed")
-
-                    //for Knockout
-                    // set eliminated of the players to true according to the eliminate_players list
-
-
-        //set new results in the database, tracing all result object items (do a test)
-        const caseStatements = [];
-        const pairingsIds = [];
-        const values = [];
-
-        const results_array = Object.entries(result_object);
-
-        results_array.forEach(([pairing_id, result], index) => {
-            caseStatements.push(`WHEN pairing_id = $${index * 2 + 1} THEN $${index * 2 + 2}`);
-            pairingsIds.push(`$${index * 2 + 1}`);
-            values.push(pairing_id, result);
+    //prepare query statement
+    let cases_list = []
+    let ids_list = []
+    resultsArray.forEach(([pairing_id, result]) => {
+            cases_list.push(`WHEN pairing_id = ${pairing_id} THEN '${result}'`);
+            ids_list.push(pairing_id); 
         });
 
-        console.log(caseStatements, pairingsIds, values)
+    const update_results_query = `
+        UPDATE pairings 
+        SET result = CASE
+            ${cases_list.join(' ')}
+            ELSE result
+        END
+        WHERE pairing_id IN (${ids_list.join(', ')});
+    `;
 
-        const update_results_query = `
-            UPDATE pairings 
-            SET result = CASE
-                ${caseStatements.join(' ')}
-                ELSE result
-            END
-            WHERE pairing_id IN (${pairingsIds.join(', ')});
-        `;
+    //////////////////////////////// manage elimination ///////////////////////
 
-        const setResults = await pool.query(update_results_query, values);
-        console.log("Results set")
+    //sent request
+    try {
+        const setResults = await pool.query(update_results_query);
+
+    } catch(err) {
+        console.error("Database update failed:", err);
+        message = err.message
+        success = false;
+        return {funcSuccess: success, funcMessage: message}
+    };
+
+    //check that the round does not have any unplayed games
+    const check_unplayed_query = `
+        SELECT * FROM pairings
+        WHERE round_id = (
+            SELECT round_id 
+            FROM rounds 
+            WHERE tournament_id = $1
+            ORDER BY round_number DESC
+            LIMIT 1
+        )
+        AND result = '-';
+    `;
+
+    try {
+        const checkUnplayed = await pool.query(check_unplayed_query, [tournamentID]);
+        if (checkUnplayed.rows.length > 0){
+            message = "Unable to finish: last round has unplayed games";
+            success = false;
+            return {funcSuccess: success, funcMessage: message}
+        };
+
+    } catch(err) {
+        console.error("Database check failed:", err);
+        message = err.message
+        success = false;
+        return {funcSuccess: success, funcMessage: message}
+    };
+
+    
+    success = true;
+    return {funcSuccess: success, funcMessage: message}
+};
 
 
+async function genNewRound (results_object, id) {
+
+    //returning object
+    const resObject = {
+        success: false,
+        message: "",
+        round_id: null
+    };
+
+/////////get some essential tournament details for type distinquishing and round number, verify doesn't break maximum/////////
+
+    //required variables to be fetched
+
+    let tournamentType = null;
+    let tournamentMaxRounds = null;
+    let currentRoundNumber = null;
+
+    //fetch general details: type, max_rounds
+    try {
+        
+        const fetchTournDetails = await pool.query(`
+            SELECT type, max_rounds
+            FROM tournaments
+            WHERE tournament_id = $1;
+            `,
+            [id])
+
+        //get type
+        tournamentType = fetchTournDetails.rows[0].type;
+
+        //get max rounds
+        tournamentMaxRounds = fetchTournDetails.rows[0].max_rounds;
+        
+
+    } catch (err) {
+        resObject.message = "Error fetching tournament details";
+        console.error("Error fetching tournament details", err);
+        return resObject;
+    }
+
+    //fetch last round number by counting
+    try {
+        const fetchNumRounds = await pool.query(`
+            SELECT COUNT(round_id)
+            FROM rounds
+            WHERE rounds.tournament_id = $1;
+            `,
+            [id])
+
+        
+        currentRoundNumber = fetchNumRounds.rows[0].count;
+
+        //verify that it will not exceed the limit
+        if (currentRoundNumber >= tournamentMaxRounds){
+            resObject.message = "Maximum number of rounds reached";
+            return resObject; 
+        };
+        
+
+
+    } catch (err) {
+        resObject.message = "Error fetching rounds";
+        console.error("Error fetching rounds", err);
+        return resObject;
+    };
+        
+
+    ////////////////////manage the results, eliminate status (if Knockout), except new round is first round//////////////////////////////
+
+    if (currentRoundNumber !== 0){
+        //passed values (results_object)
+            //in index.js
+
+        const results_array = Object.entries(results_object);
+
+        const operationReturn = await updateAllResults(results_array, id);
+        console.log(operationReturn);
+            if (operationReturn.funcSuccess === false){
+                resObject.message = operationReturn.funcMessage;
+                return res.json(resObject);
+            }; 
+    };
+
+    //UPDATE PREVIOUS FUNCTION BEFORE CONTINUING
+       
+
+/*
         /////////////////////////////acquire essentials details before generating new pairings///////////////////////////////////////////
 
         //generate list of players, their opponents and colour they played
@@ -337,6 +432,17 @@ app.post("/tournament/:id/create-round", async (req, res) => {
     } catch (err) {
         console.error(err.message);
     };
-});
-*/
+    */
+    return resObject;
+};
 
+
+
+
+// Example usage
+(async () => {
+    const tournamentId = 19;
+    const results = {'11': "1-0", '12': "1/2-1/2"}
+    operation = await genNewRound(results, tournamentId);
+    console.log(operation);
+})();

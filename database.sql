@@ -145,7 +145,7 @@ CREATE TABLE pairings(
     round_id INT REFERENCES rounds(round_ID) ON DELETE CASCADE NOT NULL, --field for round ID, foreign key, not null
     white_player_id INT REFERENCES players(player_ID) ON DELETE CASCADE, --field for white player ID, foreign key
     black_player_id INT REFERENCES players(player_ID) ON DELETE CASCADE, --field for black player ID, foreign key
-    result VARCHAR(10)                --field for result, 10 characters max
+    result VARCHAR(10) NOT NULL                --field for result, 10 characters max, not null 
 );
 
 
@@ -210,6 +210,8 @@ ADD COLUMN surname VARCHAR(30) NOT NULL;
 ALTER TABLE predefined
 DROP COLUMN blak_player_id,
 DROP COLUMN tournament_id;
+
+UP
 
 
 ALTER TABLE tournaments
@@ -386,3 +388,14 @@ WHERE r.tournament_id = 16 AND r.round_number < 3 AND p.black_player_id iS NOT N
                 FROM pairings p
                 JOIN rounds r ON p.round_id = r.round_id
                 WHERE r.tournament_id = $2 AND r.round_number < $3 AND p.black_player_id iS NOT NULL;
+
+
+SELECT * FROM pairings
+WHERE round_id = (
+    SELECT round_id 
+    FROM rounds 
+    WHERE tournament_id = 17
+    ORDER BY round_number DESC
+    LIMIT 1
+)
+AND result = '-'

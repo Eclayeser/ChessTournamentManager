@@ -24,6 +24,8 @@ const RoundsDisplay = () => {
 
     const { tournamentId } = useParams();
 
+    const [error, setError] = useState("");
+
     const navigate = useNavigate();
 
     //Finish Tournament Confirmation Modal
@@ -131,8 +133,11 @@ const RoundsDisplay = () => {
             // if authorised -> set all rounds, else -> set error value and go to login page
             if (server_resObject.success === true) {
                 setAllRounds(server_resObject.rounds);
-                setLastRoundNumber(server_resObject.rounds[server_resObject.rounds.length - 1].round_number);
-                console.log(server_resObject.rounds[server_resObject.rounds.length - 1].round_number);
+
+                if (server_resObject.rounds.length > 0){
+                    setLastRoundNumber(server_resObject.rounds[server_resObject.rounds.length - 1].round_number);
+                };
+
 
             } else {
                 
@@ -171,15 +176,17 @@ const RoundsDisplay = () => {
                 setAllSingleRoundPairings(server_resObject.pairings);
                 setCurrentRound(currentRound);
 
+
                 //set pairingsResult to have "-" for all pairings except the bye ones if the current round is the last round
                 if (currentRound === lastRoundNumber) {
                     const resultObject = {};
                     server_resObject.pairings.forEach(pairing => {
                         if (pairing.result !== "bye") {
-                            resultObject[pairing.pairing_id] = "-";
+                            resultObject[pairing.pairing_id] = pairing.result;
                         };
                     });
                     setPairingsResults(resultObject);
+                    console.log(resultObject)
                 }
 
             } else {
@@ -260,10 +267,13 @@ const RoundsDisplay = () => {
             //get sessionID from localStorage
             const sessionID = localStorage.getItem("sessionID");
 
+            const body = { results_object: pairingsResults };
+
             //send request to server
             const response = await fetch(`http://localhost:5000/tournament/${tournamentId}/finish`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json", "Session-Id": sessionID },
+                body: JSON.stringify(body),
             });
             //response from server
             const server_resObject = await response.json();
@@ -271,7 +281,9 @@ const RoundsDisplay = () => {
             // if authorised -> set tournament details, else -> set error value and go to login page
             if (server_resObject.success === true) {
                 requestTournamentDetails();
+                fetchSingleRoundPairings(currentRound);
                 closeModalFinishConf();
+                setError("");
 
             } else {
 
@@ -280,7 +292,8 @@ const RoundsDisplay = () => {
                     localStorage.setItem("globalMessage", server_resObject.message);
                     navigate("/login");
                 } else {
-                    console.log(server_resObject.message);
+                    closeModalFinishConf();
+                    setError(server_resObject.message);
                 };
             };
 
@@ -294,7 +307,6 @@ const RoundsDisplay = () => {
     // Set the result of a pairing function (using pairingID and result)
     const setResult = (pairingID, result) => {
         setPairingsResults({...pairingsResults, [pairingID]: result});
-        console.log(pairingsResults);
     };
 
     useEffect(() => {
@@ -311,6 +323,13 @@ const RoundsDisplay = () => {
             {(currentRound === 0 && tournamentDetails.status !== "initialised") ? (
                 <h2>Generate new round OR select from existing rounds</h2>
             ) : (null)}
+
+            {allRounds === null ? (
+                    <button>Generate next round</button>
+                ) : (null)}
+
+            {/* Dynamic Error Message */}
+            {error && <p style={{color: "red"}}>{error}</p>}
 
             {tournamentDetails.status === "initialised" ? (
                 <div>
@@ -366,7 +385,8 @@ const RoundsDisplay = () => {
                                                     <td>{pairing.result}</td>
                                                 ) : (
                                                 <td>
-                                                    <select value={pairingsResults.round_id} onChange={(e) => setResult(pairing.pairing_id, e.target.value)}>
+                                                    <select onChange={(e) => setResult(pairing.pairing_id, e.target.value)}>
+                                                        <option value = {pairing.result} selected disabled hidden>{pairing.result}</option>
                                                         <option value="-">-</option>
                                                         <option value="1-0">1-0</option>
                                                         <option value="1/2-1/2">1/2-1/2</option>
