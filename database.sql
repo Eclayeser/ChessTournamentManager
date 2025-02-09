@@ -363,17 +363,17 @@ WHERE r.tournament_id = 16 AND r.round_number < 3 AND p.black_player_id iS NOT N
 
 
 
-                SELECT 
+SELECT 
                     p.white_player_id AS player_id,
-                CASE 
-                    WHEN p.result = '1-0' THEN 1.0 
-                    WHEN p.result = '1/2-1/2' THEN 0.5 
-                    WHEN p.result = 'bye' THEN $1
-                    ELSE 0.0 
-                END AS points
+                    CASE 
+                        WHEN p.result = '1-0' THEN 1.0 
+                        WHEN p.result = '1/2-1/2' THEN 0.5 
+                        WHEN p.result = 'bye' THEN $1
+                        ELSE 0.0 
+                    END AS points
                 FROM pairings p
                 JOIN rounds r ON p.round_id = r.round_id
-                WHERE r.tournament_id = $2 AND r.round_number < "$3"
+                WHERE r.tournament_id = $2 AND r.round_number < $3
 
                 UNION ALL
 
@@ -387,7 +387,7 @@ WHERE r.tournament_id = 16 AND r.round_number < 3 AND p.black_player_id iS NOT N
                 END AS points
                 FROM pairings p
                 JOIN rounds r ON p.round_id = r.round_id
-                WHERE r.tournament_id = $2 AND r.round_number < $3 AND p.black_player_id iS NOT NULL;
+                
 
 
 SELECT * FROM pairings
@@ -437,3 +437,32 @@ GROUP BY type, max_rounds;
 
 
 SELECT round_id FROM rounds WHERE tournament_id = 16 ORDER BY round_number DESC LIMIT 1;
+
+
+
+
+SELECT 
+    p.white_player_id AS player_id,
+    CASE 
+        WHEN p.result = '1-0' THEN 1.0 
+        WHEN p.result = '1/2-1/2' THEN 0.5 
+        WHEN p.result = 'bye' THEN 0.0
+        ELSE 0.0 
+    END AS points
+FROM pairings p
+JOIN rounds r ON p.round_id = r.round_id
+WHERE r.tournament_id = 16 AND r.round_number < 4
+
+UNION ALL
+
+SELECT 
+    p.black_player_id AS player_id,
+CASE 
+    WHEN p.result = '0-1' THEN 1.0 
+    WHEN p.result = '1/2-1/2' THEN 0.5
+    WHEN p.result = 'bye' THEN 0.0 
+    ELSE 0.0 
+END AS points
+FROM pairings p
+JOIN rounds r ON p.round_id = r.round_id
+WHERE r.tournament_id = 16 AND r.round_number < 4 AND p.black_player_id iS NOT NULL;
