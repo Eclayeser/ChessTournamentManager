@@ -188,13 +188,10 @@ const DisplayPlayers = () => {
     //Fetch tournament details function
     const requestTournamentDetails = async () => {
         try {
-            //get sessionID from localStorage
-            const sessionID = localStorage.getItem("sessionID");
-
             //send request to server
             const response = await fetch(`http://localhost:5000/tournament/${tournamentId}/fetch-details`, {
                 method: "GET",
-                headers: { "Content-Type": "application/json", "Session-Id": sessionID },
+                headers: { "Content-Type": "application/json", "Session-Id": localStorage.getItem("sessionID") },
             });
             //response from server
             const server_resObject = await response.json();
@@ -224,12 +221,10 @@ const DisplayPlayers = () => {
 
     const fetchPlayers = async () => {
         try {
-            const sessionID = localStorage.getItem("sessionID");
-
             //send request to server
             const response = await fetch(`http://localhost:5000/tournament/${tournamentId}/players`, {
                 method: "GET",
-                headers: { "Content-Type": "application/json", "Session-Id": sessionID },
+                headers: { "Content-Type": "application/json", "Session-Id": localStorage.getItem("sessionID") },
             });
             
             //response from server
@@ -270,16 +265,7 @@ const DisplayPlayers = () => {
         setError("");
         setSuccessMessage("");
 
-        //check if the number of players has reached the maximum
-        if (listPlayersTable.length >= tournamentDetails.max_participants) {
-            setError("The maximum number of players has been reached.");
-            return;
-        }
-
         try {
-            //get sessionID from localStorage
-            const sessionID = localStorage.getItem("sessionID");
-
             //object to be sent to server
             const body = {
                 name: name,
@@ -289,15 +275,16 @@ const DisplayPlayers = () => {
                 additional_points: addPoints
             }
 
+            console.log(body);
             //fetch request to server
             const response = await fetch(`http://localhost:5000/tournament/${tournamentId}/create-player`, {
                 method: "POST",
-                headers: { "Content-Type": "application/json", "Session-Id": sessionID },
+                headers: { "Content-Type": "application/json", "Session-Id": localStorage.getItem("sessionID") },
                 body: JSON.stringify(body),
             });
             //response from server
             const server_resObject = await response.json();
-            
+            console.log(server_resObject);
             // if operation successful -> set tournament details
             if (server_resObject.success === true) {
                 closeModalAddPlayer();

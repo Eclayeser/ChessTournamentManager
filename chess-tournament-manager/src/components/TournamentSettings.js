@@ -19,8 +19,6 @@ const TournamentSettings = () => {
     const [name, setName] = useState("");
     const [type, setType] = useState("");
     const [tieBreak, setTieBreak] = useState("");
-    const [maxRounds, setMaxRounds] = useState(0);
-    const [maxParticipants, setMaxParticipants] = useState(0);
     const [hideRating, setHideRating] = useState("");
     const [byeVal, setByeVal] = useState("");
 
@@ -50,17 +48,14 @@ const TournamentSettings = () => {
     //Fetch tournament details function
     const requestTournamentDetails = async () => {
         try {
-            //get sessionID from localStorage
-            const sessionID = localStorage.getItem("sessionID");
 
             //send request to server
             const response = await fetch(`http://localhost:5000/tournament/${tournamentId}/fetch-details`, {
                 method: "GET",
-                headers: { "Content-Type": "application/json", "Session-Id": sessionID },
+                headers: { "Content-Type": "application/json", "Session-Id": localStorage.getItem("sessionID") },
             });
             //response from server
             const server_resObject = await response.json();
-            console.log(server_resObject);
 
             // if authorised -> set tournament details, else -> set error value and go to login page
             if (server_resObject.success === true) {
@@ -69,8 +64,6 @@ const TournamentSettings = () => {
 
                 setType(server_resObject.details.type);
                 setName(server_resObject.details.name);
-                setMaxRounds(server_resObject.details.max_rounds);
-                setMaxParticipants(server_resObject.details.max_participants);
                 setHideRating(server_resObject.details.hide_rating);
                 setByeVal(server_resObject.details.bye_value);
                 setStatus(server_resObject.details.status)
@@ -104,15 +97,10 @@ const TournamentSettings = () => {
         setSuccessMessage("");
 
         try {
-            //get sessionID from localStorage
-            const sessionID = localStorage.getItem("sessionID");
-
             //object to be sent to server
             const body = {
                         name: name,
                         type: type,
-                        max_rounds: maxRounds,
-                        max_participants: maxParticipants,
                         bye_value: byeVal,
                         hide_rating: hideRating
             }; 
@@ -122,7 +110,7 @@ const TournamentSettings = () => {
             //send request to server
             const response = await fetch(`http://localhost:5000/tournament/${tournamentId}/update-details`, {
                 method: "PUT",
-                headers: { "Content-Type": "application/json", "Session-Id": sessionID },
+                headers: { "Content-Type": "application/json", "Session-Id": localStorage.getItem("sessionID") },
                 body: JSON.stringify(body),
             });
             //response from server
@@ -156,13 +144,10 @@ const TournamentSettings = () => {
         setSuccessMessage("");
 
         try {
-            //get sessionID from localStorage
-            const sessionID = localStorage.getItem("sessionID");
-
             //fetch request to server
             const response = await fetch(`http://localhost:5000/tournament/${tournamentId}/delete`, {
                 method: "DELETE",
-                headers: { "Content-Type": "application/json", "Session-Id": sessionID },
+                headers: { "Content-Type": "application/json", "Session-Id": localStorage.getItem("sessionID") },
             });
             //response from server
             const server_resObject = await response.json();
@@ -214,22 +199,6 @@ const TournamentSettings = () => {
 
                 <label> Tournament Name:
                     <input type="text" value={name} onChange={(e) => setName(e.target.value)} required />
-                </label>
-
-                <label> Number of Rounds:
-                    {(tournament.type === "Knockout" || tournament.type === "Round-robin" || tournament.status !== "initialised") ? (
-                        <input type="number" value={maxRounds} disabled />
-                    ) : (
-                        <input type="number" value={maxRounds} onChange={(e) => setMaxRounds(Number(e.target.value))} min={1} max={50} required />
-                    )}
-                </label>
-
-                <label> Maximum Players:
-                    {(tournament.status !== "initialised") ? (
-                        <input type="number" value={maxParticipants} disabled />
-                    ) : (
-                        <input type="number" value={maxParticipants} onChange={(e) => setMaxParticipants(Number(e.target.value))} min={1} max={1000} required />
-                    )}
                 </label>
 
                 <label> Tournament Type:

@@ -67,7 +67,7 @@ const firstNameConstraints = /^[a-zA-Z\- ]{1,20}$/;
 const surnameConstraints = /^[a-zA-Z\- ]{1,20}$/;
 const emailConstraints = /^[a-zA-Z0-9\-.@]{1,50}$/;
 
-//tournaments: name, type, tie_break, max_rounds, max_participants, hide_rating
+//tournaments: name, type, tie_break, hide_rating
 const tournamentNameConstraints = /^[a-zA-Z_0-9\- ]{1,50}$/;
 
 
@@ -97,7 +97,7 @@ function verifySession(givenSessionID) {
 //Validation Functions//
 
 //validate Tournament Details
-function verifyTournamentDetails(name, type, tie_break, max_rounds, max_participants, hide_rating) {
+function verifyTournamentDetails(name, type, tie_break, hide_rating) {
     const KEY = "=PASS="; //used to ignore particular value validation
 
     //set valid values for ignored parameters
@@ -110,12 +110,6 @@ function verifyTournamentDetails(name, type, tie_break, max_rounds, max_particip
     if (tie_break === KEY) {
         tie_break = "Sonneborn-Berger";
     };
-    if (max_rounds === KEY) {
-        max_rounds = 1;
-    };
-    if (max_participants === KEY) {
-        max_participants = 1;
-    };
     if (hide_rating === KEY) {
         hide_rating = false;
     };
@@ -123,20 +117,8 @@ function verifyTournamentDetails(name, type, tie_break, max_rounds, max_particip
     let message = "";
 
     //check if NOT NULL, (hide rating checked separately)
-    if (!name || !max_rounds || !max_participants || !type) {
+    if (!name || !type) {
         message = "Data fields cannot be left empty";
-        return { valid: false, message: message };
-    };
-
-    //check max_rounds constraints: range and integer
-    if ( max_rounds < 1 || max_rounds > 50 || !Number.isInteger(max_rounds)) {
-        message = "Number of rounds must be an integer between 1 and 50";
-        return { valid: false, message: message };
-    };
-
-    //check max_participants constraints: range and integer
-    if ( max_participants < 1 || max_participants > 1000 || !Number.isInteger(max_participants)) {
-        message = "Number of players must be an integer between 1 and 1000";
         return { valid: false, message: message };
     };
 
@@ -321,25 +303,26 @@ function verifyEntryDetails(additional_points, eliminated) {
 
 //Function: verify requested tournament is assigned to the current user
 async function authoriseTournamentAccess(userID, givenTournamentID) {
-    //get the tournament ids assigned to the user
+    
     try {
-
+        
         if (isNaN(givenTournamentID)) {
             return { funcSuccess: false, funcMessage: "Invalid tournament ID" };
         };
-
+        
         const response = await pool.query(
             "SELECT tournament_id FROM tournaments WHERE user_id = $1",
             [userID]);
         
         const tournamentIds = response.rows.map(row => row.tournament_id);
-
+        
         //compare the requested tournament id to the list
         if (!tournamentIds.includes(parseInt(givenTournamentID))) {
             return { funcSuccess: false, funcMessage: "Unauthorised: attempt to access a tournament not assigned to the current user" };
         } else {
             return { funcSuccess: true };
         };
+        
 
     } catch (error) {
         console.error(error);
@@ -383,7 +366,6 @@ async function authorisePairAccess(tournamentID, givenPairID, type) {
 
 //Function verify requessted round is assigned to the current tournament
 async function authoriseRoundAccess(tournamentID, givenRoundID) {
-    console.log(tournamentID, givenRoundID);
     try {
         if (isNaN(givenRoundID)) {
             return { funcSuccess: false, funcMessage: "Invalid round ID" };
@@ -394,7 +376,6 @@ async function authoriseRoundAccess(tournamentID, givenRoundID) {
             [tournamentID]);
 
         const roundIds = response.rows.map(row => row.round_id);
-        console.log(roundIds);
 
         if (!roundIds.includes(parseInt(givenRoundID))) {
             return { funcSuccess: false, funcMessage: "Unauthorised: attempt to access a round not assigned to the current tournament" };
@@ -418,7 +399,7 @@ async function getPlayersColorCounts(tournamentId) {
         
 
         //get the list of players (not-eliminated), for each make a player object with 0 white and black counts
-        const players = await pool.query(`SELECT player_id FROM entries WHERE tournament_id = $1 AND eliminated = false`, [tournamentId]);
+        const players = await pool.query(`SELECT player_id FROM entries WHERE tournament_id = $1`, [tournamentId]);
 
         const playerCounts = {};
         players.rows.forEach(({ player_id }) => { playerCounts[player_id] = { white: 0, black: 0 } });
@@ -467,6 +448,7 @@ async function getNEPlayers(tournamentId) {
             "SELECT player_id FROM entries WHERE tournament_id = $1 AND eliminated = false;",
             [tournamentId]
         );
+        console.log("1:  ", getPlayers.rows);
 
         let list_of_players = getPlayers.rows.map((player) => player.player_id);
 
@@ -491,7 +473,6 @@ async function getNEPlayers(tournamentId) {
 
         //remove bye players from list_of_players
         list_of_players = list_of_players.filter((player) => !bye_player_ids.includes(player));
-        console.log(list_of_players);
 
         //put bye players at the beginning of the list
         const sortedlist = bye_player_ids.concat(list_of_players);
@@ -508,7 +489,7 @@ async function getPlayersOpponents(tournamentId) {
     try {
 
         //form list of players (not-eliminated), for each make a empty list of opponents
-        const players = await pool.query(`SELECT player_id FROM entries WHERE tournament_id = $1 AND eliminated = false`, [tournamentId]);
+        const players = await pool.query(`SELECT player_id FROM entries WHERE tournament_id = $1`, [tournamentId]);
 
         const playerOpponents = {};
         players.rows.forEach(({ player_id }) => { playerOpponents[player_id] = []});
@@ -530,7 +511,7 @@ async function getPlayersOpponents(tournamentId) {
             FROM pairings p
             JOIN rounds r ON p.round_id = r.round_id
             WHERE r.tournament_id = $1 AND p.black_player_id IS NOT NULL;`, 
-        [tournamentId]);
+            [tournamentId]);
 
         //fill the list of opponents for each player
         result.rows.forEach(({ player_id, opponent_id }) => { playerOpponents[player_id].push(opponent_id) });
@@ -587,7 +568,6 @@ async function getPlayersCumulativePoints(tournamentId, roundNumber) {
         playerPoints[player_id] += parseFloat(points);
         });
 
-        console.log(playerPoints);
         return playerPoints;
     } catch (error) {
         console.error(error);
@@ -623,7 +603,7 @@ async function updateLastRoundResults(resultsArray, tournamentID) {
 
         //form a list of corresponding pairing ids (of last round, exluding byes) to given user id
         const lastPairings = await pool.query(`
-            SELECT pairings.pairing_id
+            SELECT pairings.pairing_id, pairings.white_player_id, pairings.black_player_id
             FROM pairings
             JOIN rounds ON pairings.round_id = rounds.round_id
             WHERE rounds.tournament_id = $1
@@ -636,6 +616,7 @@ async function updateLastRoundResults(resultsArray, tournamentID) {
             [tournamentID]);
         
         const requiredPairingIds = lastPairings.rows.map(row => row.pairing_id);
+        console.log(lastPairings.rows);
 
         //prepare query statement
         let cases_list = []
@@ -669,6 +650,79 @@ async function updateLastRoundResults(resultsArray, tournamentID) {
 
 };
 
+//Function: update elimination status based on pairings results
+async function updateEliminationStatus(tournamentId, roundNumber) {
+    resObject = { funcSuccess: false, funcMessage: "" };
+    console.log(roundNumber);
+
+    try{
+        let eliminatedPlayers = [];
+        
+        //get all the pairings in the tournament
+        const pairings = await pool.query(`
+            SELECT pairings.* 
+            FROM pairings 
+            JOIN rounds ON pairings.round_id = rounds.round_id
+            WHERE rounds.tournament_id = $1 AND rounds.round_number <= $2`, 
+            [tournamentId, roundNumber]);
+
+        //iterate through each pairing
+        for (let i = 0; i < pairings.rows.length; i++) {
+            const pairing = pairings.rows[i];
+            //if pairing result is '0-1'
+            if (pairing.result === '0-1') {
+                //white_player_id pushed to eliminatedPlayers
+                eliminatedPlayers.push(pairing.white_player_id);
+
+            //if pairing result is '1-0'
+            } else if (pairing.result === '1-0') {
+                //black_player_id pushed to eliminatedPlayers
+                eliminatedPlayers.push(pairing.black_player_id);
+            };
+        };
+        
+        //convert array to set to remove duplicates
+        const eliminatedPlayersSet = new Set(eliminatedPlayers);
+
+        //make a set of players that are not eliminated
+        const notEliminatedPlayersSet = new Set();
+        const entries = await pool.query(`
+            SELECT player_id FROM entries WHERE tournament_id = $1`, 
+            [tournamentId]);
+
+        entries.rows.forEach(({ player_id }) => {
+            if (!eliminatedPlayersSet.has(player_id)) {
+                notEliminatedPlayersSet.add(player_id);
+            };
+        });
+
+        console.log(eliminatedPlayersSet);
+        console.log(notEliminatedPlayersSet);
+
+        //set eliminated status to true for all players in eliminatedPlayers
+        await pool.query(`
+            UPDATE entries 
+            SET eliminated = true 
+            WHERE player_id = ANY($1) AND tournament_id = $2`, 
+            [Array.from(eliminatedPlayersSet), tournamentId]);
+        //set eliminated status to false for all players in notEliminatedPlayers
+        await pool.query(`
+            UPDATE entries 
+            SET eliminated = false 
+            WHERE player_id = ANY($1) AND tournament_id = $2`, 
+            [Array.from(notEliminatedPlayersSet), tournamentId]);
+
+        resObject.funcSuccess = true;
+        resObject.funcMessage = "Elimination status updated";
+        return resObject;
+
+
+    } catch (err) {
+        console.error(err);
+        resObject.funcMessage = "Server error";
+        return resObject;
+    };
+};
 
 //ROUTES//
 
@@ -1092,7 +1146,7 @@ app.post("/create-tournament", async (req, res) => {
     try{
 
         //receive passed values
-        let { name, type, tie_break, max_rounds, max_participants, hide_rating, bye_value } = req.body;
+        let { name, type, tie_break, hide_rating, bye_value } = req.body;
 
         //verify that the request is authorised
         const userSession = verifySession(req.headers["session-id"]);
@@ -1107,27 +1161,15 @@ app.post("/create-tournament", async (req, res) => {
         if (type === "Knockout"){
             bye_value = 0;
             tie_break = null;
-            //halves every time
-            max_rounds =  Math.ceil(Math.log2(max_participants))
-        }
+        };
 
         //define settings if round-robin
         if (type === "Round-robin"){
-            bye_value = 0
-            //max rounds: 3,4 -> 3; 5,6 -> 5
-            if (max_participants % 2 === 1){
-                max_rounds = max_participants 
-            } else {
-                max_rounds = max_participants - 1
-            }
-            if (max_rounds > 50) {
-                max_rounds = 50
-            }
-            
-        }
+            bye_value = 0       
+        };
 
         //validate tournament details
-        const validationResult = verifyTournamentDetails(name, type, tie_break, max_rounds, max_participants, hide_rating);
+        const validationResult = verifyTournamentDetails(name, type, tie_break, hide_rating);
         if (!validationResult.valid) {
             resObject.message = validationResult.message;
             return res.json(resObject);
@@ -1136,9 +1178,9 @@ app.post("/create-tournament", async (req, res) => {
         //insert new tournament
         const newTournament = await pool.query(
             `INSERT INTO tournaments 
-            (user_id, name, type, max_rounds, max_participants, bye_value, tie_break, hide_rating, status)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING tournament_id`,
-            [userSession.userID, name, type, max_rounds, max_participants, bye_value, tie_break, hide_rating, 'initialised']
+            (user_id, name, type, bye_value, tie_break, hide_rating, status)
+             VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING tournament_id`,
+            [userSession.userID, name, type, bye_value, tie_break, hide_rating, 'initialised']
         );
 
         resObject.success = true;
@@ -1180,56 +1222,35 @@ app.put("/tournament/:id/update-details", async (req, res) => {
         
 
         //receive passed values
-        let { name, type, max_rounds, max_participants, bye_value, hide_rating } = req.body;
+        let { name, type, bye_value, hide_rating } = req.body;
 
             
         //define settings if knockout
         if (type === "Knockout"){
             bye_value = 0;
             tie_break = null;
-            //halves every time
-            max_rounds =  Math.ceil(Math.log2(max_participants))
-        }
+        };
 
         //define settings if round-robin
         if (type === "Round-robin"){
-            bye_value = 0
-            //max rounds: 3,4 -> 3; 5,6 -> 5
-            if (max_participants % 2 === 1){
-                max_rounds = max_participants 
-            } else {
-                max_rounds = max_participants - 1
-            }
-            if (max_rounds > 50) {
-                max_rounds = 50
-            }
-            
-        }
+            bye_value = 0     
+        };
 
 
         //validate tournament details
-        const validationResult = verifyTournamentDetails(name, "=PASS=", "=PASS=", max_rounds, max_participants, hide_rating);
+        const validationResult = verifyTournamentDetails(name, "=PASS=", "=PASS=", hide_rating);
         if (!validationResult.valid) {
             resObject.message = validationResult.message;
             return res.json(resObject);
         };
 
-
-        //check that new max_participants is not less than the current number of participants
-        const participants = await pool.query("SELECT * FROM entries WHERE tournament_id = $1", [id]);
-
-        if (participants.rows.length > max_participants) {
-            resObject.message = "Number of participants cannot be less than the current number of participants";
-            return res.json(resObject);
-        };
-
-
+        
         //update tournament details
         const updatedTournament = await pool.query(
             `UPDATE tournaments 
-            SET name = $1, max_rounds = $2, max_participants = $3, bye_value = $4, hide_rating = $5 
-            WHERE tournament_id = $6`,
-            [name, max_rounds, max_participants, bye_value, hide_rating, id]
+            SET name = $1, bye_value = $2, hide_rating = $3
+            WHERE tournament_id = $4`,
+            [name, bye_value, hide_rating, id]
         );
         resObject.success = true;
         resObject.message = "Details have been updated";
@@ -1350,7 +1371,7 @@ app.post("/tournament/:id/create-player", async (req, res) => {
        //get the id from the URL params, check if the tournament is assigned to the current user
        const { id } = req.params;
        const authorised = await authoriseTournamentAccess(userSession.userID, id);
-       if (!authorised.funcMessage) {
+       if (!authorised.funcSuccess) {
            resObject.message = authorised.funcMessage;
            return res.json(resObject);
        };
@@ -1369,6 +1390,7 @@ app.post("/tournament/:id/create-player", async (req, res) => {
             additional_points = 0;
         };
 
+
        //check if player details meet constraints
         const validationResult = verifyPlayerDetails(name, rating, club, email);
         if (!validationResult.valid) {
@@ -1383,7 +1405,6 @@ app.post("/tournament/:id/create-player", async (req, res) => {
             return res.json(resObject);
         };
 
-
         //check if player with the given email already exists
         const existingPlayer = await pool.query("SELECT * FROM players WHERE email = $1;", [email]);
 
@@ -1391,7 +1412,6 @@ app.post("/tournament/:id/create-player", async (req, res) => {
             resObject.message = "Player with this email already exists in the database. Use 'Seach and Add' to add the player to the tournament";
             return res.json(resObject);
         };
-
 
         //create new player
         const newPlayer = await pool.query(
@@ -1839,6 +1859,19 @@ app.put("/tournament/:id/add-forbidden-pair", async (req, res) => {
             return res.json(resObject);
         };
 
+
+        //for knockout, check if any player is eliminated
+        const tournament = await pool.query("SELECT * FROM tournaments WHERE tournament_id = $1", [id]);
+        if (tournament.rows[0].type === "Knockout") {
+            const player1 = await pool.query("SELECT * FROM entries WHERE player_id = $1 AND tournament_id = $2", [player_1_id, id]);
+            const player2 = await pool.query("SELECT * FROM entries WHERE player_id = $1 AND tournament_id = $2", [player_2_id, id]);
+
+            if (player1.rows[0].eliminated || player2.rows[0].eliminated) {
+                resObject.message = "One of the players is eliminated";
+                return res.json(resObject);
+            };
+        };
+
         //add a forbidden pair
         const addForbiddenPair = await pool.query(
             "INSERT INTO forbidden (tournament_id, player_1_id, player_2_id) VALUES ($1, $2, $3);",
@@ -1917,6 +1950,18 @@ app.put("/tournament/:id/add-predefined-pair", async (req, res) => {
         if (existingForbiddenPair.rows.length > 0) {
             resObject.message = "Pair already exists in forbidden pairs";
             return res.json(resObject);
+        };
+
+        //for knockout, check if any player is eliminated
+        const tournament = await pool.query("SELECT * FROM tournaments WHERE tournament_id = $1", [id]);
+        if (tournament.rows[0].type === "Knockout") {
+            const player1 = await pool.query("SELECT * FROM entries WHERE player_id = $1 AND tournament_id = $2", [player_1_id, id]);
+            const player2 = await pool.query("SELECT * FROM entries WHERE player_id = $1 AND tournament_id = $2", [player_2_id, id]);
+
+            if (player1.rows[0].eliminated || player2.rows[0].eliminated) {
+                resObject.message = "One of the players is eliminated";
+                return res.json(resObject);
+            };
         };
 
         //add a predefined pair
@@ -2296,9 +2341,9 @@ app.post("/tournament/:id/create-round", async (req, res) => {
 
         /////////get some essential tournament details for type distinquishing and round number, verify doesn't break maximum/////////
 
-        //fetch general details: type, max_rounds
+        //fetch general details: type
         const fetchTournDetails = await pool.query(`
-            SELECT type, max_rounds
+            SELECT type
             FROM tournaments
             WHERE tournament_id = $1;
             `,
@@ -2306,9 +2351,7 @@ app.post("/tournament/:id/create-round", async (req, res) => {
 
         
         const tournamentType = fetchTournDetails.rows[0].type;
-        const tournamentMaxRounds = fetchTournDetails.rows[0].max_rounds;
         
-
         const fetchNumRounds = await pool.query(`
             SELECT COUNT(round_id)
             FROM rounds
@@ -2318,15 +2361,8 @@ app.post("/tournament/:id/create-round", async (req, res) => {
 
         
         const currentRoundNumber = fetchNumRounds.rows[0].count;
-
-        //verify that it will not exceed the limit
-        if (currentRoundNumber >= tournamentMaxRounds){
-            resObject.message = "Maximum number of rounds reached";
-            return res.json(resObject); 
-        };
         
         
-
         ////////////////////manage the results, eliminate status (if Knockout), except new round is first round///////////////////
 
         if (parseInt(currentRoundNumber) !== 0){
@@ -2341,11 +2377,18 @@ app.post("/tournament/:id/create-round", async (req, res) => {
             const results_array = Object.entries(results_object);
 
             const operationReturn = await updateLastRoundResults(results_array, id);
-            console.log(operationReturn);
             if (operationReturn.funcSuccess === false){
                 resObject.message = operationReturn.funcMessage;
                 return res.json(resObject);
-            }; 
+            };
+        };
+
+        if (tournamentType === "Knockout"){
+            const operation = updateEliminationStatus(id, currentRoundNumber);
+            if (operation.funcSuccess === false){
+                resObject.message = operation.funcMessage;
+                return res.json(resObject);
+            };
         };
 
         /////////////////////////////acquire essentials details before generating new pairings///////////////////////////////////////////
@@ -2354,6 +2397,11 @@ app.post("/tournament/:id/create-round", async (req, res) => {
         let list_of_waiting_players = await getNEPlayers(id); // [ id1, id2, id3, ...]
         const colours_data = await getPlayersColorCounts(id); // { id1: { white:2, black:3 }, ...}
         const opponents_data = await getPlayersOpponents(id); // { id1: [id2, id3], ...}
+
+        if (list_of_waiting_players.length < 2){
+            resObject.message = "No more rounds can be created";
+            return res.json(resObject);
+        };
 
         //get the predefined pairs
         const predefinedPairsRequested = await pool.query(
@@ -2378,6 +2426,7 @@ app.post("/tournament/:id/create-round", async (req, res) => {
         const forbPairsList = forbiddenPairsRequested.rows; // [ { player_1_id: id1, player_2_id: id2 }, ...]
 
         /////////////////////////////////insert into rounds: with next round number, tournament id; return round id///////////////////////////////////
+        console.log(list_of_waiting_players, colours_data, opponents_data, predPairsList, forbPairsList);
         const nextRoundNumber = parseInt(currentRoundNumber) + 1;
 
         //create new round
@@ -2477,6 +2526,12 @@ app.post("/tournament/:id/create-round", async (req, res) => {
             await pool.query(`INSERT INTO pairings (round_id, white_player_id, black_player_id, result) VALUES ($1, $2, NULL, 'bye');`, [newRoundId, player]);
         };
 
+        ///////////////////clear predefined pairs/////////////////////////////////////
+        const clearPredefined = await pool.query(
+            "DELETE FROM predefined WHERE tournament_id = $1;",
+            [id]
+        );
+
         resObject.message = "Results updated successfully";
         resObject.success = true;
         resObject.round_id = newRoundId;
@@ -2539,7 +2594,19 @@ app.delete("/tournament/:id/delete-last-round", async (req, res) => {
             resObject.last_round_number = newLastRound.rows[0].round_number;
         }
 
-        
+        ///////////////////manage eliminations for knockout tournaments/////////////////////////////
+        const tournamentType = await pool.query(
+            "SELECT type FROM tournaments WHERE tournament_id = $1;",
+            [id]
+        );
+
+        if (tournamentType.rows[0].type === "Knockout"){
+            const operation = updateEliminationStatus(id, newLastRound.rows[0].round_number-1);
+            if (operation.funcSuccess === false){
+                resObject.message = operation.funcMessage;
+                return res.json(resObject);
+            };
+        };
         
         resObject.success = true;
         resObject.message = "Last round has been removed";

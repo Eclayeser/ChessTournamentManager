@@ -8,8 +8,6 @@ const CreateTournamentDisplay = () => {
     const [name, setName] = useState("");
     const [type, setType] = useState("Swiss System");
     const [tieBreak, setTieBreak] = useState("Buchholz Total");
-    const [maxRounds, setMaxRounds] = useState(0);
-    const [maxParticipants, setMaxParticipants] = useState(0);
     const [hideRating, setHideRating] = useState(false);
     const [byeVal, setByeVal] = useState(0);
 
@@ -24,21 +22,18 @@ const CreateTournamentDisplay = () => {
         setError("");
 
         try {
-            const sessionID = localStorage.getItem("sessionID");
 
             const body = {
                 name: name,
                 type: type,
                 tie_break: tieBreak,
-                max_rounds: maxRounds,
-                max_participants: maxParticipants,
                 hide_rating: hideRating,
                 bye_value: byeVal
             }
             //fetch request to server
             const response = await fetch(`http://localhost:5000/create-tournament`, {
                 method: "POST",
-                headers: { "Content-Type": "application/json", "Session-Id": sessionID },
+                headers: { "Content-Type": "application/json", "Session-Id": localStorage.getItem("sessionID") },
                 body: JSON.stringify(body),
             });
             //response from server
@@ -78,21 +73,6 @@ const CreateTournamentDisplay = () => {
             <form onSubmit={createTournament} style={{ display: "flex", flexDirection: "column", maxWidth: "400px", margin: "15px" }}>
                 <label> Tournament Name:
                     <input type="text" value={name} onChange={(e) => setName(e.target.value)} required />
-                </label>
-
-                <label> Maximum number of Rounds:
-                    {type === "Knockout" ? (
-                    <input type="text" value={"*calculated for Knockout*"} disabled /> 
-                    ) : 
-                    type === "Round-robin" ? (
-                    <input type="text" value={"*calculated for Round-robin*"} disabled /> 
-                    ) : (
-                    <input type="number" value={maxRounds} onChange={(e) => setMaxRounds(Number(e.target.value))} min={1} max={50} required />
-                    )}
-                </label>
-
-                <label> Maximum Players:
-                    <input type="number" value={maxParticipants} onChange={(e) => setMaxParticipants(Number(e.target.value))} min={1} max={1000} required />
                 </label>
 
                 <label> Tournament Type:
