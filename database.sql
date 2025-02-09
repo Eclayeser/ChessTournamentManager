@@ -394,8 +394,46 @@ SELECT * FROM pairings
 WHERE round_id = (
     SELECT round_id 
     FROM rounds 
-    WHERE tournament_id = 17
+    WHERE tournament_id = 16
     ORDER BY round_number DESC
     LIMIT 1
 )
 AND result = '-'
+
+
+SELECT p.pairing_id, p.white_player_id, p.black_player_id, p.round_id, r.round_number, p.result,
+                    wp.name AS white_player_name, wp.rating AS white_player_rating,
+                    bp.name AS black_player_name, bp.rating AS black_player_rating
+                FROM pairings p
+                JOIN rounds r ON p.round_id = r.round_id
+                JOIN players wp ON p.white_player_id = wp.player_id
+                LEFT JOIN players bp ON p.black_player_id = bp.player_id
+                WHERE p.round_id = 3 AND r.tournament_id = 1
+
+
+--authorise pairings requests
+SELECT pairings.pairing_id
+            FROM pairings
+            JOIN rounds ON pairings.round_id = rounds.round_id
+            WHERE rounds.tournament_id = 16
+            AND rounds.round_number = (
+                SELECT MAX(r.round_number)
+                FROM rounds r
+                WHERE r.tournament_id = 16
+            )
+            AND pairings.result != 'bye';
+
+
+update tournaments
+set status = 'initialised'
+where tournament_id = 16;
+
+
+SELECT type, max_rounds, COUNT(round_id)
+FROM tournaments
+JOIN rounds ON tournaments.tournament_id = rounds.tournament_id
+WHERE tournaments.tournament_id = 17
+GROUP BY type, max_rounds;
+
+
+SELECT round_id FROM rounds WHERE tournament_id = 16 ORDER BY round_number DESC LIMIT 1;

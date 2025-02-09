@@ -60,7 +60,7 @@ const TournamentSettings = () => {
             });
             //response from server
             const server_resObject = await response.json();
-            
+            console.log(server_resObject);
 
             // if authorised -> set tournament details, else -> set error value and go to login page
             if (server_resObject.success === true) {

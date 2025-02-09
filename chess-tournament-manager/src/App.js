@@ -18,11 +18,11 @@ import RoundsDisplay from "./components/TournamentRounds";
 // Main App Component
 function App() {
 
-  // Check if sessionID is present on localStorage, verify with server
   const checkSession = async() => {
+    // If sessionID is present on localStorage, verify with server
     if (localStorage.getItem("sessionID")) {
-      const sessionID = localStorage.getItem("sessionID");
 
+      // Try to verify sessionID with server
       try{
         const response = await fetch("http://localhost:5000/check-session", {
           method: "GET",
@@ -30,12 +30,16 @@ function App() {
         });
         const server_resObject = await response.json();
 
+        // If sessionID is not found on server, remove from localStorage
         if (server_resObject.found === false) {
           localStorage.removeItem("sessionID");
           return;
         };
+
+        // If sessionID is found on server, continue
         return;
 
+      // Log error due to fetch failure
       } catch (err) {
         console.error(err.message);
       };
