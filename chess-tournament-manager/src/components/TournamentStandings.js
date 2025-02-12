@@ -100,7 +100,8 @@ const DisplayStandings = () => {
                             {rounds.map((result, index) => (
                                     <th key={index}>R{index + 1}</th>
                                 ))}
-                            <th>Tie Break Pts.</th>
+                            { tournamentDetails.tie_break ===  null ? null : <th>Tie Break Pts.</th> }
+                            
                         </tr>
                     </thead>
                     <tbody>
@@ -113,7 +114,7 @@ const DisplayStandings = () => {
                                 {section.rounds_result.map((result, index) => (
                                     <th key={index}>{result}</th>
                                 ))}
-                                <td>{section.tiebreak_points}</td>
+                                { tournamentDetails.tie_break ===  null ? null : <td>{section.tiebreak_points}</td> }
                             </tr>
                         ))}
                     </tbody>

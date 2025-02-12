@@ -141,11 +141,6 @@ const RoundsDisplay = () => {
                     setLastRoundNumber(server_resObject.rounds[server_resObject.rounds.length - 1].round_number); // *num*
                 };
 
-                console.log("--------------------");
-                console.log("All rounds: ", server_resObject.rounds);
-                console.log("Last round number: ", server_resObject.rounds[server_resObject.rounds.length - 1].round_number);
-                console.log("--------------------");
-
             } else {
                 if (server_resObject.found === false) {
                     localStorage.removeItem("sessionID");

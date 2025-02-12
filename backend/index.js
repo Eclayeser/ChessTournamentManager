@@ -2789,17 +2789,17 @@ app.get(`/tournament/:id/standings`, async (req, res) => {
         } else {
             const lastRoundNumber = lastRoundDetails.rows[0].round_number;
 
-            //get tournament status
-            const tournamentStatus = await pool.query(`
-                SELECT status
+            //get tournament details
+            const tournamentDetails = await pool.query(`
+                SELECT *
                 FROM tournaments
                 WHERE tournament_id = $1;
                 `, [id]);
-            const status = tournamentStatus.rows[0].status;
+            const status = tournamentDetails.rows[0].status;
+            const tie_break = tournamentDetails.rows[0].tie_break;
 
             //decide which round number to consider
             const considerRoundNumber = status === "finished" ? lastRoundNumber+1 : lastRoundNumber;
-            console.log(considerRoundNumber);
 
             //get cumulative point (tournamentID, lastRoundNumber or lastRoundNumber + 1 (if status is 'finished'))
             const playerPoints = await getPlayersCumulativePoints(id, considerRoundNumber);
@@ -2810,7 +2810,7 @@ app.get(`/tournament/:id/standings`, async (req, res) => {
 
                 let results = [];
                 const resultsData = await pool.query(`
-                    SELECT r.round_number, p.result,
+                    SELECT r.round_number, p.result, p.white_player_id, p.black_player_id,
                         CASE 
                             WHEN (p.white_player_id = $1 AND p.result = '1-0') OR 
                                 (p.black_player_id = $1 AND p.result = '0-1') THEN 'W'
@@ -2830,11 +2830,91 @@ app.get(`/tournament/:id/standings`, async (req, res) => {
                 resultsData.rows.forEach(({ round_number, result, outcome }) => {
                     results.push(outcome);
                 });
+                
+                //for knockout, cocat a list of "-" to match legth of rounds
+                if (results.length < considerRoundNumber - 1){
+                    const diff = (considerRoundNumber - 1) - results.length;
+                    for (let j = 0; j < diff; j++){
+                        results.push("-");
+                    };
+                };
 
                 standings[i]["rounds_result"] = results;
 
+                ///////////////////////TIE BREAKS////////////////////////
+                let tiebreakPts = 0;
+                console.log(tie_break);
+
+                if (tie_break === "Buchholz Total" || tie_break === "Buchholz Cut 1" || tie_break === "Buchholz Cut Median"){
+                    let buchholz = [];
+
+                    for ( let i = 0; i < resultsData.rows.length; i++){
+                        const row = resultsData.rows[i];
+                        if (row.outcome === "W"){
+                            const playersPts = await getPlayersCumulativePoints(id, row.round_number);
+
+                            if (row.result === '1-0'){
+                                buchholz.push(playersPts[row.black_player_id] || 0);
+
+                            } else if (row.result === '0-1'){
+                                buchholz.push(playersPts[row.white_player_id] || 0);   
+                            }
+                        }
+                    };
+                    //remove zeroes
+                    buchholz = buchholz.filter(x => x !== 0);
+                    //sort in descending order
+                    buchholz.sort((a, b) => b - a);
+
+                    if (tie_break === "Buchholz Cut 1"){
+                        //cut 1
+                        buchholz = buchholz.slice(0, -1);
+                    };
+
+                    if (tie_break === "Buchholz Cut Median"){
+                        //first and last
+                        buchholz = buchholz.slice(1, -1);
+                    };
+
+                    //add up all points
+                    buchholz = buchholz.reduce((a, b) => a + b, 0);
+
+                    //assign to tiebreakPts
+                    tiebreakPts = buchholz;
+
+                } else if (tie_break === "Sonneborn-Berger"){
+                    let sonneborn = 0;
+
+                    for ( let i = 0; i < resultsData.rows.length; i++){
+                        const row = resultsData.rows[i];
+                        if (row.outcome === "W"){
+                            //last round points
+                            const playersPts = await getPlayersCumulativePoints(id, considerRoundNumber);
+
+                            if (row.result === '1-0'){
+                                sonneborn += playersPts[row.black_player_id] || 0;
+
+                            } else if (row.result === '0-1'){
+                                sonneborn += playersPts[row.white_player_id] || 0;
+
+                            } else if (row.result === '1/2-1/2'){
+
+                                //if draw, add half of the points
+                                if (row.white_player_id === standings[i].player_id){
+                                    sonneborn += playersPts[row.black_player_id] / 2 || 0;
+                                } else {
+                                    sonneborn += playersPts[row.white_player_id] / 2 || 0;
+                                };
+                            };
+                        }
+                    };
+
+                    //assign to tiebreakPts
+                    tiebreakPts = sonneborn;
+                };
+
                 //default tiebreak points for testing
-                standings[i]["tiebreak_points"] = 0;
+                standings[i]["tiebreak_points"] = tiebreakPts;
             };
 
 
