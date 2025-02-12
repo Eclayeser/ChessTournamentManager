@@ -466,3 +466,38 @@ END AS points
 FROM pairings p
 JOIN rounds r ON p.round_id = r.round_id
 WHERE r.tournament_id = 16 AND r.round_number < 4 AND p.black_player_id iS NOT NULL;
+
+
+
+SELECT 
+    p.white_player_id AS player_id, 
+    p.black_player_id AS opponent_id
+FROM pairings p
+JOIN rounds r ON p.round_id = r.round_id
+WHERE r.tournament_id = 16 AND p.black_player_id IS NOT NULL
+
+UNION ALL
+
+SELECT 
+    p.black_player_id AS player_id, 
+    p.white_player_id AS opponent_id
+FROM pairings p
+JOIN rounds r ON p.round_id = r.round_id
+WHERE r.tournament_id = 16 AND p.black_player_id IS NOT NULL;
+
+
+SELECT players.player_id, pairings.result
+FROM pairings
+JOIN entries ON players.player_id = entries.player_id
+JOIN rounds ON pairings.round_id = rounds.round_id
+WHERE rounds.tournament_id = 16 AND rounds.round_number = 1 AND players.player_id = 1;
+
+SELECT pairings.result FROM pairings WHERE player_id = 13 ORDER BY round DESC LIMIT 1;
+
+SELECT forbidden.pair_id, forbidden.player_1_id, p1.name AS player_1_name, forbidden.player_2_id, p2.name AS player_2_name
+            FROM forbidden
+            JOIN players p1 ON forbidden.player_1_id = p1.player_id
+            JOIN players p2 ON forbidden.player_2_id = p2.player_id
+            JOIN tournaments ON forbidden.tournament_id = tournaments.tournament_id
+            JOIN entries ON tournaments.tournament_id = entries.tournament_id  
+            WHERE forbidden.tournament_id = 22 AND entries.eliminated = false;

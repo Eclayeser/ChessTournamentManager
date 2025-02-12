@@ -443,40 +443,148 @@ async function getPlayersColorCounts(tournamentId) {
 //Function: form a list of not eliminated players in the tournament (bye players go first)
 async function getNEPlayers(tournamentId) {
     try {
-        //form a list of not-eliminated player ids
-        const getPlayers = await pool.query(
-            "SELECT player_id FROM entries WHERE tournament_id = $1 AND eliminated = false;",
-            [tournamentId]
-        );
-        console.log("1:  ", getPlayers.rows);
 
-        let list_of_players = getPlayers.rows.map((player) => player.player_id);
+        //get type
+        const tournamentDetails = await pool.query(`SELECT type FROM tournaments WHERE tournament_id = $1`, [tournamentId]);
 
-        //get last round id where round_number is largest
-        const lastRound = await pool.query(
-            "SELECT round_id FROM rounds WHERE tournament_id = $1 ORDER BY round_number DESC LIMIT 1;",
-            [tournamentId]
-        );
+        //get last round
+        const lastRoundDetails = await pool.query("SELECT * FROM rounds WHERE tournament_id = $1 ORDER BY round_number DESC LIMIT 1", [tournamentId]);
 
-        //if no rounds have been played, return list_of_players
-        if (lastRound.rows.length === 0) {
-            return list_of_players;
+
+        //Swiss System 
+        if (tournamentDetails.rows[0].type === "Swiss System") {
+            
+            //get not-eliminated players
+            const waitingPlayers = await pool.query(`
+                SELECT entries.player_id, players.rating
+                FROM entries
+                JOIN players ON entries.player_id = players.player_id
+                WHERE entries.tournament_id = $1 and entries.eliminated = false;`
+            , [tournamentId]);
+
+            let waitingPlayers_list = waitingPlayers.rows;
+
+            ///////////// sort by rating, if no rounds were created //////////////////////////////////////
+            if (lastRoundDetails.rows.length === 0){
+    
+                waitingPlayers_list.sort((a, b) => {
+                    return b.rating - a.rating;
+                });
+
+                let ids = [];
+                for (let i = 0; i < waitingPlayers_list.length; i++){
+                    ids.push(waitingPlayers_list[i].player_id);
+                };
+
+                return ids;
+            };
+
+            ////////////////////// sort by rating, points, and byes ////////////////////////////////////////////
+
+            //////prepare data in form: [{ player_id: 13, rating: 1212, points: 0, bye: true }, ... ]///////////
+
+            //get cumulative scores
+            const playersPts = await getPlayersCumulativePoints(tournamentId, lastRoundDetails.rows[0].round_number + 1);
+            
+            //form an obhect {'id': boolean}, where id is a player id and boolean value represents if the player has had a bye last round
+            const resultsData = await pool.query(`
+                SELECT white_player_id, result
+                FROM pairings
+                WHERE round_id = $1;`,
+                [lastRoundDetails.rows[0].round_id]);
+
+            let playersResults = {};
+
+            for (let k = 0; k < resultsData.rows.length; k++){
+                playersResults[resultsData.rows[k].white_player_id] = resultsData.rows[k].result;
+            };
+
+            let playerANDresultsArray = waitingPlayers_list;
+
+            // prepare main list of objects to be sorted
+            for (let i = 0; i < playerANDresultsArray.length; i++){
+                //add points to each object
+                playerANDresultsArray[i]['points'] = playersPts[playerANDresultsArray[i].player_id];
+
+                //set booleans indicating bye results
+                if (playersResults[playerANDresultsArray[i].player_id] !== undefined){
+
+                    if (playersResults[playerANDresultsArray[i].player_id] === 'bye'){
+                        playerANDresultsArray[i]['bye'] = true;
+                    } else {
+                        playerANDresultsArray[i]['bye'] = false;
+                    }
+
+                } else {
+                    playerANDresultsArray[i]['bye'] = false;
+                };
+                
+            };
+
+
+
+            ////////////////// sort; priority descend: points -> bye -> rating///////////////////
+
+            playerANDresultsArray.sort((a, b) =>{
+                
+                if (a.points === b.points){
+
+                    //sort by bye
+                    if (a.bye && !b.bye) return -1 ;
+                    if (!a.bye && b.bye) return 1 ;
+
+                    //sort by rating
+                    return b.rating - a.rating ;
+                    
+                //sort by points
+                } else {
+                    return b.points - a.points;
+                };
+
+            });
+            
+            let ids = [];
+            for (let i = 0; i < playerANDresultsArray.length; i++){
+                ids.push(playerANDresultsArray[i].player_id);
+            };
+
+            return ids;
+
+        //Round-Robin and Knockout => fetch players, position bye players at the very top
+        } else {
+            
+            //form a list of not-eliminated player ids
+            const getPlayers = await pool.query(
+                "SELECT player_id FROM entries WHERE tournament_id = $1 AND eliminated = false;",
+                [tournamentId]
+            );
+
+            let list_of_players = getPlayers.rows.map((player) => player.player_id);
+
+            //if no rounds have been played, return list_of_players
+            if (lastRoundDetails.rows.length === 0) {
+                return list_of_players;
+            };
+
+            //get all pairings from last round that has result of bye
+            const byePlayers = await pool.query(
+                "SELECT white_player_id FROM pairings WHERE round_id = $1 AND result = 'bye';",
+                [lastRoundDetails.rows[0].round_id]
+            );
+
+            const bye_player_ids = byePlayers.rows.map((player) => player.white_player_id);
+
+            //remove bye players from list_of_players
+            list_of_players = list_of_players.filter((player) => !bye_player_ids.includes(player));
+
+            //put bye players at the beginning of the list
+            const sortedlist = bye_player_ids.concat(list_of_players);
+            return sortedlist;
+
         };
 
-        //get all pairings from last round that has result of bye
-        const byePlayers = await pool.query(
-            "SELECT white_player_id FROM pairings WHERE round_id = $1 AND result = 'bye';",
-            [lastRound.rows[0].round_id]
-        );
 
-        const bye_player_ids = byePlayers.rows.map((player) => player.white_player_id);
-
-        //remove bye players from list_of_players
-        list_of_players = list_of_players.filter((player) => !bye_player_ids.includes(player));
-
-        //put bye players at the beginning of the list
-        const sortedlist = bye_player_ids.concat(list_of_players);
-        return sortedlist;
+        
 
     } catch (error) {
         console.error(error);
@@ -653,7 +761,6 @@ async function updateLastRoundResults(resultsArray, tournamentID) {
 //Function: update elimination status based on pairings results
 async function updateEliminationStatus(tournamentId, roundNumber) {
     resObject = { funcSuccess: false, funcMessage: "" };
-    console.log(roundNumber);
 
     try{
         let eliminatedPlayers = [];
@@ -695,9 +802,6 @@ async function updateEliminationStatus(tournamentId, roundNumber) {
                 notEliminatedPlayersSet.add(player_id);
             };
         });
-
-        console.log(eliminatedPlayersSet);
-        console.log(notEliminatedPlayersSet);
 
         //set eliminated status to true for all players in eliminatedPlayers
         await pool.query(`
@@ -2425,6 +2529,18 @@ app.post("/tournament/:id/create-round", async (req, res) => {
         );
         const forbPairsList = forbiddenPairsRequested.rows; // [ { player_1_id: id1, player_2_id: id2 }, ...]
 
+        ////////////////////////////////////////debug///////////////////////////////////
+
+        //check that no eliminated players are in the waiting list
+        const getPlayersNEcheck = await pool.query(
+            "SELECT player_id FROM entries WHERE tournament_id = $1 AND eliminated = false;",
+            [id]
+        );
+        const notEliminated_ids = getPlayersNEcheck.rows.map((row) => row.player_id)
+
+        //ensure eliminated players are removed from waiting players list
+        list_of_waiting_players = list_of_waiting_players.filter((id) => notEliminated_ids.includes(id));
+        
         /////////////////////////////////insert into rounds: with next round number, tournament id; return round id///////////////////////////////////
         console.log(list_of_waiting_players, colours_data, opponents_data, predPairsList, forbPairsList);
         const nextRoundNumber = parseInt(currentRoundNumber) + 1;
@@ -2553,6 +2669,7 @@ app.delete("/tournament/:id/delete-last-round", async (req, res) => {
     const resObject = { success: false, found: false, message: "", last_round_id: null, last_round_number: null, no_rounds_left: false };
 
     try {
+
         //verify that the request is authorise
         const userSession = verifySession(req.headers["session-id"]);
         if (!userSession.funcFound) {
@@ -2592,7 +2709,7 @@ app.delete("/tournament/:id/delete-last-round", async (req, res) => {
         } else {
             resObject.last_round_id = newLastRound.rows[0].round_id;
             resObject.last_round_number = newLastRound.rows[0].round_number;
-        }
+        };
 
         ///////////////////manage eliminations for knockout tournaments/////////////////////////////
         const tournamentType = await pool.query(
@@ -2600,8 +2717,8 @@ app.delete("/tournament/:id/delete-last-round", async (req, res) => {
             [id]
         );
 
-        if (tournamentType.rows[0].type === "Knockout"){
-            const operation = updateEliminationStatus(id, newLastRound.rows[0].round_number-1);
+        if (tournamentType.rows[0].type === "Knockout" && newLastRound.rows.length > 0){
+            const operation = updateEliminationStatus(id, newLastRound.rows[0].round_number-1 );
             if (operation.funcSuccess === false){
                 resObject.message = operation.funcMessage;
                 return res.json(resObject);
