@@ -2735,3 +2735,135 @@ app.delete("/tournament/:id/delete-last-round", async (req, res) => {
         return res.json(resObject);
     };
 });
+
+//TournamentStandings.js Component Route: fetch standings
+app.get(`/tournament/:id/standings`, async (req, res) => {
+    //returning object
+    const resObject = { success: false, found: false, message: "", standings: null };
+
+    try {
+        //verify that the request is authorise
+        const userSession = verifySession(req.headers["session-id"]);
+        if (!userSession.funcFound) {
+            resObject.message = userSession.funcMessage;
+            return res.status(401).json(resObject);
+        } else {
+            resObject.found = true;
+        };
+
+        //get the id from the URL params, check if the tournament is assigned to the current user
+        const { id } = req.params;
+        const authorised = await authoriseTournamentAccess(userSession.userID, id);
+        if (!authorised.funcSuccess) {
+            resObject.message = authorised.funcMessage;
+            return res.json(resObject);
+        };
+
+        //FORM and SORT STANDINGS
+        const playersData = await pool.query(`
+            SELECT entries.player_id, players.name, players.rating
+            FROM entries
+            JOIN players ON entries.player_id = players.player_id
+            WHERE entries.tournament_id = $1;
+            `, [id]);
+
+        let standings = playersData.rows;
+
+        //get last round details
+        const lastRoundDetails = await pool.query(`
+            SELECT *
+            FROM rounds
+            WHERE tournament_id = $1
+            ORDER BY round_number DESC
+            LIMIT 1;
+            `, [id]);
+
+        //if empty, nor ounds were created yet
+        if (lastRoundDetails.rows.length === 0) {
+            for (let i = 0; i < standings.length; i++){
+                standings[i]["player_points"] = 0;
+                standings[i]["rounds_result"] = [];
+                standings[i]["tiebreak_points"] = 0;
+            };
+      
+        } else {
+            const lastRoundNumber = lastRoundDetails.rows[0].round_number;
+
+            //get tournament status
+            const tournamentStatus = await pool.query(`
+                SELECT status
+                FROM tournaments
+                WHERE tournament_id = $1;
+                `, [id]);
+            const status = tournamentStatus.rows[0].status;
+
+            //decide which round number to consider
+            const considerRoundNumber = status === "finished" ? lastRoundNumber+1 : lastRoundNumber;
+            console.log(considerRoundNumber);
+
+            //get cumulative point (tournamentID, lastRoundNumber or lastRoundNumber + 1 (if status is 'finished'))
+            const playerPoints = await getPlayersCumulativePoints(id, considerRoundNumber);
+
+            //build a list of objects to be sorted [{ player_id: 12, player_name: "Player 1", player_rating: 1200, points: 5, rounds_result: ["L", "L", "W", "W", "L"], tiebreak_points: 22 }, ...]
+            for (let i = 0; i < standings.length; i++){
+                standings[i]["player_points"] = playerPoints[standings[i].player_id];
+
+                let results = [];
+                const resultsData = await pool.query(`
+                    SELECT r.round_number, p.result,
+                        CASE 
+                            WHEN (p.white_player_id = $1 AND p.result = '1-0') OR 
+                                (p.black_player_id = $1 AND p.result = '0-1') THEN 'W'
+                            WHEN (p.white_player_id = $1 AND p.result = '0-1') OR 
+                                (p.black_player_id = $1 AND p.result = '1-0') THEN 'L'
+                            WHEN p.result = '1/2-1/2' THEN 'D'
+                            WHEN p.result = 'bye' THEN 'B'
+                            ELSE 'U'
+                        END AS outcome
+                    FROM pairings p
+                    JOIN rounds r ON p.round_id = r.round_id
+                    WHERE (p.white_player_id = $1 OR p.black_player_id = $1)
+                    AND r.tournament_id = $2 AND r.round_number < $3
+                    ORDER BY r.round_number ASC;`, 
+                    [standings[i].player_id, id, considerRoundNumber]);
+
+                resultsData.rows.forEach(({ round_number, result, outcome }) => {
+                    results.push(outcome);
+                });
+
+                standings[i]["rounds_result"] = results;
+
+                //default tiebreak points for testing
+                standings[i]["tiebreak_points"] = 0;
+            };
+
+
+            //sort standings by player_points, tiebreak_points, player_rating
+            //priority -> higher points, higher tiebreak points, lower rating
+            standings.sort((a, b) => {
+                if (a.player_points === b.player_points) {
+
+                    if (a.tiebreak_points === b.tiebreak_points) {
+                        return a.rating - b.rating;
+                    } else {
+                        return b.tiebreak_points - a.tiebreak_points;
+                    }
+
+                } else {
+                    return b.player_points - a.player_points;
+                };
+            });
+        };
+
+
+        resObject.standings = standings;
+        resObject.success = true;
+        resObject.message = "Standings have been found";
+        return res.json(resObject);
+
+    } catch (err) {
+        console.error(err);
+        resObject.message = "Server Error";
+        return res.json(resObject);
+    };
+});
