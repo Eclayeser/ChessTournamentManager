@@ -15,19 +15,25 @@ import DisplayPlayers from "./components/TournamentPlayers";
 import DisplayStandings from "./components/TournamentStandings";
 import RoundsDisplay from "./components/TournamentRounds";
 
+// Bootstrap CSS
+import 'bootstrap/dist/css/bootstrap.min.css';
+
 // Main App Component
 function App() {
 
+  // Function to check if existing in localStorage session matches any server session
   const checkSession = async() => {
     // If sessionID is present on localStorage, verify with server
     if (localStorage.getItem("sessionID")) {
 
-      // Try to verify sessionID with server
       try{
+        // Send request to server
         const response = await fetch("http://localhost:5000/check-session", {
           method: "GET",
+          // include sessionID in headers
           headers: { "Content-Type": "application/json", "Session-Id": localStorage.getItem("sessionID") },
         });
+        // Response from server
         const server_resObject = await response.json();
 
         // If sessionID is not found on server, remove from localStorage
@@ -39,15 +45,16 @@ function App() {
         // If sessionID is found on server, continue
         return;
 
-      // Log error due to fetch failure
+      // Log any errors
       } catch (err) {
         console.error(err.message);
       };
-  }
+  };
 };
 
-// Clear localStorage SessionID if SessionID is not present of server, triggered by useEffect
+//trigger every time the component is rendered
 useEffect(() => {
+  //call checkSession function
   checkSession();
 }, []);
 

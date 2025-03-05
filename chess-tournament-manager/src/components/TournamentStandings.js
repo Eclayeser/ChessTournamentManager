@@ -1,6 +1,7 @@
 //Import neccessary libraries and hooks
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { saveAs } from "file-saver";
 
 const DisplayStandings = () => {
 
@@ -15,7 +16,6 @@ const DisplayStandings = () => {
      // Fetch the tournament details function (using tournamentID)
      const requestTournamentDetails = async () => {
         try {
-
             //send request to server
             const response = await fetch(`http://localhost:5000/tournament/${tournamentId}/fetch-details`, {
                 method: "GET",
@@ -76,6 +76,23 @@ const DisplayStandings = () => {
         };
     };
 
+    //Save CSV
+    const saveCSV = () => {
+            //convert table to csv
+            const rows = document.querySelectorAll("table tr");
+            let csvContent = "";
+    
+            rows.forEach(row => {
+                const cols = row.querySelectorAll("td, th");
+                const rowData = Array.from(cols).map(col => col.innerText).join(",");
+                csvContent += rowData + "\n";
+            });
+    
+            //download csv file
+            const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+            saveAs(blob, `${tournamentDetails.name}_standings.csv`);
+        };
+
     useEffect(() => {
         //fetch data
         fetchStandings();
@@ -95,32 +112,40 @@ const DisplayStandings = () => {
                         <tr>
                             <th>Position</th>
                             <th>Name</th>
+                            {/*if hide rrating is enabled, do not show rating*/}
                             { tournamentDetails.hide_rating ? null : <th>Rating</th> }
                             <th>Points</th>
+                            {/*mapping is used to make the number of column dynamic and correspond to the number of rounds in the list*/}
                             {rounds.map((result, index) => (
                                     <th key={index}>R{index + 1}</th>
                                 ))}
-                            { tournamentDetails.tie_break ===  null ? null : <th>Tie Break Pts.</th> }
-                            
+                            {/*For Knockout, tie break system will be automatically disabled*/}
+                            { tournamentDetails.tie_break ===  null ? null : <th>Tie Break Pts.</th> }  
                         </tr>
                     </thead>
                     <tbody>
+                        {/*dynamic number of rows (section is referred to as a row)*/}
                         {standings.map((section, index) => (
                             <tr key={index}>
+                                {/*Position*/}
                                 <td>{index + 1}</td>
+                                {/*Name and rating (if rating is enabled)*/}
                                 <td>{section.name}</td>
                                 { tournamentDetails.hide_rating ? null : <th>{section.rating}</th> }
+                                {/*Cumulative points for each player*/}
                                 <td>{section.player_points}</td>
+                                {/*Dynamic number of round results rendered*/}
                                 {section.rounds_result.map((result, index) => (
                                     <th key={index}>{result}</th>
                                 ))}
+                                {/*For Knockout, tie break system will be automatically disabled*/}
                                 { tournamentDetails.tie_break ===  null ? null : <td>{section.tiebreak_points}</td> }
                             </tr>
                         ))}
                     </tbody>
                 </table>
 
-                <button>Save CSV</button>
+                <button onClick={saveCSV}>Save CSV</button>
 
             </div>
 

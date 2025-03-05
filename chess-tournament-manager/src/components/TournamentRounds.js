@@ -76,12 +76,10 @@ const RoundsDisplay = () => {
     // Save the results of all pairings in a single round function (using result, pairingsID and roundID), Create a new round with new pairings function (using tournament type from tournamentDetails and tournamentID)
     const createNewRound = async () => {
         setError("");
-        console.log(pairingsResults);
 
         try {
 
             const body = { results_object: pairingsResults };
-
             //send request to server
             const response = await fetch(`http://localhost:5000/tournament/${tournamentId}/create-round`, {
                 method: "POST",
@@ -97,13 +95,6 @@ const RoundsDisplay = () => {
                 fetchSingleRoundPairings(server_resObject.round_id);
                 setCurrentRoundNumber(server_resObject.round_number);
                 setPairingsResults({});
-
-                console.log("--------------------");
-                console.log("server_resObject.round_id: ", server_resObject.round_id);
-                console.log("server_resObject.round_number: ", server_resObject.round_number);
-                console.log("Pairings:", server_resObject.pairings);
-                console.log("--------------------");
-
             } else {
                 
                 if (server_resObject.found === false) {
@@ -133,10 +124,10 @@ const RoundsDisplay = () => {
             //response from server
             const server_resObject = await response.json();
 
-            // if authorised -> set all rounds, else -> set error value and go to login page
+            // if successful
             if (server_resObject.success === true) {
                 setAllRounds(server_resObject.rounds); // [{round_id: *num*, tournament_id: *num*, round_number: *num*}, ...]
-
+                //set last round number if there are any rounds
                 if (server_resObject.rounds.length > 0){
                     setLastRoundNumber(server_resObject.rounds[server_resObject.rounds.length - 1].round_number); // *num*
                 };
@@ -190,13 +181,6 @@ const RoundsDisplay = () => {
                     setPairingsResults(resultObject);
                 };
 
-                console.log("--------------------");
-                console.log("All pairings: ", server_resObject.pairings);
-                console.log("Current round number: ", server_resObject.round_number);
-                console.log("Last round number: ", lastRoundNumber);
-                console.log("Last round pairings results: ", pairingsResults);
-                console.log("--------------------");
-
 
             } else {
 
@@ -220,7 +204,6 @@ const RoundsDisplay = () => {
         setError("");
 
         try {
-
             //send request to server
             const response = await fetch(`http://localhost:5000/tournament/${tournamentId}/delete-last-round`, {
                 method: "DELETE",
@@ -228,12 +211,9 @@ const RoundsDisplay = () => {
             });
             //response from server
             const server_resObject = await response.json();
-
             // if authorised -> set all rounds, else -> set error value and go to login page
             if (server_resObject.success === true) {
-
                 fetchAllRounds();
-
                 if (server_resObject.no_rounds_left === false) {
                     //fetchSingleRoundPairings(server_resObject.round_id);
                     setLastRoundNumber(server_resObject.last_round_number);
@@ -246,15 +226,7 @@ const RoundsDisplay = () => {
                     setCurrentRoundNumber(0);
                     setLastRoundNumber(0);
                 };
-                
-                console.log("--------------------");
-                console.log("server_resObject.no_rounds_left: ", server_resObject.no_rounds_left);
-                console.log("server_resObject.last_round_number: ", server_resObject.last_round_number);
-                console.log("server_resObject.last_round_id: ", server_resObject.last_round_id);
-                console.log("Last round number: ", lastRoundNumber);
-                console.log("Current round number: ", currentRoundNumber);
-                console.log("--------------------");
-
+ 
             } else {
 
                 if (server_resObject.found === false) {
@@ -272,20 +244,26 @@ const RoundsDisplay = () => {
         };
     }
 
-    //Save CSV
+    // Save CSV function to export the current round's pairings as a CSV file
     const saveCSV = () => {
-            //convert table to csv
+            // Select all table rows in the document
             const rows = document.querySelectorAll("table tr");
+            // Initialize an empty string to hold the CSV content
             let csvContent = "";
-    
+
+            // Iterate over each row
             rows.forEach(row => {
+                // Select all table cells (td) and headers (th) in the current row
                 const cols = row.querySelectorAll("td, th");
+                // Map the text content of each cell to an array and join them with commas to form a CSV row
                 const rowData = Array.from(cols).map(col => col.innerText).join(",");
+                // Append the CSV row to the CSV content string, followed by a newline character
                 csvContent += rowData + "\n";
             });
     
-            //download csv file
+            // Create a new Blob object with the CSV content and specify the MIME type as CSV
             const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+            // Use the saveAs function from the file-saver library to trigger a download of the CSV file
             saveAs(blob, `tournament_round_${currentRoundNumber}.csv`);
         };
 
@@ -392,10 +370,13 @@ const RoundsDisplay = () => {
             {/* Dynamic Error Message */}
             {error && <p style={{color: "red"}}>{error}</p>}
 
+            {/*If the tournament is initialised, display the start tournament button*/}
             {tournamentDetails.status === "initialised" ? (
                 <div>
+                    {/*Title and button to start the tournament*/}
                     <h2>Begin the tournament:</h2>
                     <button onClick={() => startTournament()}>Start Tournament</button>
+                    {/*Description of the start tournament button*/}
                     <p>Once the tournament has started you will not be able to add or remove the players from the tournament</p>
                 </div>
             ) : (
@@ -408,7 +389,7 @@ const RoundsDisplay = () => {
                     </div>
 
                     <div>
-                        {/**onClick={createNewRound} */}
+                        {/*If the current round is the last round and the tournament is not finished, display the generate next round button*/}
                         {(currentRoundNumber === lastRoundNumber && tournamentDetails.status !== "finished") ? (
                             <button onClick={createNewRound}>Generate Next Round</button>
                         ) : (null)}
@@ -434,10 +415,11 @@ const RoundsDisplay = () => {
                                 {allSingleRoundPairings.map((pairing, index) => (
                                     <tr key={pairing.pairing_id}>
                                         <td>{index + 1}</td>
+                                        
                                         <td>{pairing.white_player_name}</td>
+                                        {/*If hide rating is false, display the rating*/}
                                         {tournamentDetails.hide_rating ? (null):(<th>{pairing.white_player_rating}</th>)}
                                         <td>{pairing.white_player_points}</td>
-
                                         {currentRoundNumber === allRounds[allRounds.length - 1].round_number ? (
                                             pairing.result === "bye" ? (
                                                 <td>{pairing.result}</td>
@@ -446,6 +428,7 @@ const RoundsDisplay = () => {
                                                     <td>{pairing.result}</td>
                                                 ) : (
                                                 <td>
+                                                    {/*Dropdown for result selection*/}
                                                     <select onChange={(e) => setResult(pairing.pairing_id, e.target.value)}>
                                                         <option value = {pairing.result} selected disabled hidden>{pairing.result}</option>
                                                         <option value="-">-</option>
@@ -457,8 +440,7 @@ const RoundsDisplay = () => {
                                             ))
                                         ) : (
                                             <td>{pairing.result}</td>
-)}
-                                        
+                                        )}
                                         <td>{pairing.black_player_points}</td>
                                         {tournamentDetails.hide_rating ? (null):(<th>{pairing.black_player_rating}</th>)}
                                         <td>{pairing.black_player_name}</td>
@@ -470,10 +452,12 @@ const RoundsDisplay = () => {
                         <button onClick={saveCSV}>Save CSV</button>
 
                         <br></br>
+                        {/*If the current round is the last round and the tournament is not finished, display the finish tournament button*/}
                         {(currentRoundNumber === lastRoundNumber && tournamentDetails.status !== "finished") ? (
                             <button onClick={openModalFinishConf}>Finish Tournament</button>
                         ) : (null)}
 
+                        {/*If there are any rounds OR the tournament status is "finished", stop displaying this button*/}
                         {(currentRoundNumber === 0 || tournamentDetails.status === "finished") ? (null) : (
                             <button onClick={deleteLastRoundPairings}>Delete Last Round</button>
                         )}

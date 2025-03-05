@@ -66,31 +66,76 @@ const DisplayDashboard = () => {
         requestTournaments();
     } , []);
     
-
-    //Display content
     return (
-        <div>
-            <h1>My Tournaments</h1>
+        <div className="container mt-4">
+            {/* Title */}
+            <h1 className="text-primary text-center mb-4">My Tournaments</h1>
 
-            {/* Display error message if any */}
-            {error && <p>{error}</p>}
+            {/* Error Message */}
+            {error && <div className="alert alert-danger text-center">{error}</div>}
 
-            {/* Display list of tournaments */}
-            <ul>
+            {/* Tournament List */}
+            <ul className="list-group shadow">
                 {tournaments.map((tournament) => (
-                    <li key={tournament.tournament_id} onClick={() => goToTournament(tournament.tournament_id)}>
-                        {tournament.name} ------------------- {tournament.status}
+                    <li 
+                        key={tournament.tournament_id} 
+                        className="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
+                        onClick={() => goToTournament(tournament.tournament_id)}
+                        style={{ cursor: "pointer" }} // Pointer effect on hover
+                    >
+                        {/* Tournament Name & Status */}
+                        <span className="fw-bold">{tournament.name}</span>
+                        <span className={`badge ${tournament.status === "Active" ? "bg-success" : "bg-secondary"}`}>
+                            {tournament.status}
+                        </span>
                     </li>
                 ))}
             </ul>
 
-            {/* Button to create new tournament */}
-            <button onClick={() => navigate("/create-tournament")}>Create New Tournament</button>
-
-        </div> 
+            {/* Button to Create New Tournament */}
+            <div className="text-center mt-4">
+                <button className="btn btn-primary px-4 py-2" onClick={() => navigate("/create-tournament")}>
+                    + Create New Tournament
+                </button>
+            </div>
+        </div>
     );
+    
 };
 
 //Export to be used by App.js
 export default DisplayDashboard;
+
+/*
+//Display content
+    return (
+        <>
+            <h1>My Tournaments</h1>
+
+            { Display error message if any }
+            {error && <p>{error}</p>}
+
+            { Display list of tournaments using map function }
+            <ul>
+            {tournaments.map((tournament) => (
+                //upon click, go to the settings page of the tournament
+                <li key={tournament.tournament_id} onClick={() => goToTournament(tournament.tournament_id)}>
+                    {display tournament name and status}
+                    {tournament.name} ------------------- {tournament.status}
+                </li>
+            ))}
+            </ul>
+
+            { Button to create new tournament }
+            <button onClick={() => navigate("/create-tournament")}>Create New Tournament</button>
+
+        </>
+    );
+*/
+
+
+
+    
+
+
 

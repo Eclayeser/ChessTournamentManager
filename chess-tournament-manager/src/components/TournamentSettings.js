@@ -49,7 +49,7 @@ const TournamentSettings = () => {
     const requestTournamentDetails = async () => {
         try {
 
-            //send request to server
+            //send request to server with dynamic URL
             const response = await fetch(`http://localhost:5000/tournament/${tournamentId}/fetch-details`, {
                 method: "GET",
                 headers: { "Content-Type": "application/json", "Session-Id": localStorage.getItem("sessionID") },
@@ -107,7 +107,7 @@ const TournamentSettings = () => {
 
             console.log(body);
 
-            //send request to server
+            //send request to server with dynamic URL
             const response = await fetch(`http://localhost:5000/tournament/${tournamentId}/update-details`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json", "Session-Id": localStorage.getItem("sessionID") },
@@ -144,7 +144,7 @@ const TournamentSettings = () => {
         setSuccessMessage("");
 
         try {
-            //fetch request to server
+            //send request to server
             const response = await fetch(`http://localhost:5000/tournament/${tournamentId}/delete`, {
                 method: "DELETE",
                 headers: { "Content-Type": "application/json", "Session-Id": localStorage.getItem("sessionID") },
@@ -153,8 +153,9 @@ const TournamentSettings = () => {
             const server_resObject = await response.json();
 
 
-            // if operation successful -> go to dashboard
+            // if operation successful
             if (server_resObject.success === true) {
+                //close modal and navigate to dashboard
                 closeModalDelConf();
                 navigate("/dashboard");
 
@@ -201,11 +202,14 @@ const TournamentSettings = () => {
                     <input type="text" value={name} onChange={(e) => setName(e.target.value)} required />
                 </label>
 
+                {/* Tournament Type */}
                 <label> Tournament Type:
+                    {/*designed to only display the type of the tournament*/}
                     <input type="text" value={type} disabled />
                 </label>
 
                 <label> Bye Value:
+                    {/*Include check to disable input if tournament is not in initial state*/}
                     {(tournament.type === "Knockout" || tournament.type === "Round-robin" || tournament.status !== "initialised") ? (
                         <input type="number" value={byeVal} disabled />
                     ) : (
@@ -240,8 +244,10 @@ const TournamentSettings = () => {
 
             {/*Delete Confirmation Modal*/}
             <Modal isOpen={isModalOpenDelConf} onClose={closeModalDelConf} title="Delete Confirmation" errorDisplay={error}>
+                {/*Confirmation message*/}
                 <h3>Are you sure you want to delete this tournament?</h3>
                 <p>All the tournament data will be permanently lost.</p>
+                {/*Buttons to confirm or cancel operation*/}
                 <button onClick={deleteTournament}>Confirm</button>
                 <button onClick={closeModalDelConf}>Cancel</button>  
             </Modal>

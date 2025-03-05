@@ -158,11 +158,7 @@ const DisplayPlayers = () => {
         setIsModalOpenAddPredPair(false);
         openModalPredPairs();
     };
-
     
-
-    
-
     const fillPlayerDetails = (player) => {
         setName(player.name);
         setEmail(player.email);
@@ -229,15 +225,19 @@ const DisplayPlayers = () => {
             
             //response from server
             const server_resObject = await response.json();
-
+            // if operation successful
             if (server_resObject.success === true) {
-
+                // if there are any players in the current tournament
                 if (server_resObject.players.length !== 0) {
+                    // set the list of players
                     setListPlayersTable(server_resObject.players);
 
                     setPlayer1ID(Number(server_resObject.players[0].player_id));
                     setPlayer2ID(Number(server_resObject.players[0].player_id));
-                };
+                } else {
+                    // if there are no players in the current tournament
+                    setListPlayersTable([]);
+                }
                 
             } else {
 
@@ -318,7 +318,7 @@ const DisplayPlayers = () => {
         setSuccessMessage("");
 
         //check if the number of players has reached the maximum
-        if (listPlayersTable.length >= tournamentDetails.max_participants) {
+        if (listPlayersTable.length >= 1000) {
             setError("The maximum number of players has been reached.");
             return;
         }
@@ -337,7 +337,10 @@ const DisplayPlayers = () => {
             const server_resObject = await response.json();
             
             // if authorised -> set tournament details, else -> set error value and go to login page
+            //if successful
             if (server_resObject.success === true) {
+                //set success message, close the pop-up
+                //re-fetch players to include new participant
                 setSuccessMessage(server_resObject.message);
                 fetchPlayers();
                 closeModalAddPlayer();
@@ -687,8 +690,9 @@ const DisplayPlayers = () => {
         saveAs(blob, "tournament_players.csv");
     };
 
-    //fetch tournament details on page load and clear error and success messages, triggered by useEffect
+    //when renders
     useEffect(() => {
+        //fetch tournament details and players
         requestTournamentDetails();
         fetchPlayers();
         setError("");
@@ -702,9 +706,10 @@ const DisplayPlayers = () => {
             {successMessage && <p style={{color:'green'}}>{successMessage}</p>}
 
             <div>
-
+                {/*Add Player button is displayed only if the tournament is initialised*/}
                 {tournamentDetails.status === "initialised" ? (<button onClick={openModalAddPlayer}>Add Player</button>) : (null)}
 
+                {/*Display Forbidden and Predefined Pairs buttons only if the tournament is not finished */}
                 {tournamentDetails.status !== "finished" ?(
                     <div>
                         <button onClick={openModalForbPairs}>Forbidden Pairs</button>
@@ -725,15 +730,23 @@ const DisplayPlayers = () => {
                             {tournamentDetails.type === "Knockout" ? (<th>Eliminated</th>):(null)}
                         </tr>
                     </thead>
+                    {/*Table body*/}
                     <tbody>
+                        {/*Map through the list of players and display their details*/}
                         {listPlayersTable.map((player, index) => (
+                            //A row for each player with onClick event to select player
                             <tr key={player.player_id} onClick={() =>selectPlayer(player.player_id)}>
+                                {/*Player number*/}
                                 <td>{index + 1}</td>
+                                {/*Player name and rating*/}
                                 <td>{player.name}</td>
                                 {tournamentDetails.hide_rating ? (null):(<th>{player.rating}</th>)}
+                                {/*Player club and additional points*/}
                                 <td>{player.club}</td>
                                 <td>{player.additional_points}</td>
+                                {/*Player eliminated status, ONLY for Knockout tournaments*/}
                                 {tournamentDetails.type === "Knockout" ? (
+                                    //If player is eliminated, display "Yes", else "No"
                                     player.eliminated ? (<th> Yes </th>) 
                                     : (<th> No </th>)
                                 ):(null)}
@@ -764,8 +777,9 @@ const DisplayPlayers = () => {
                     <label>Additional Points: <input type="number" value={addPoints} onChange={(e) => setAddPoints(Number(e.target.value))}/> </label>
                     <button type="submit">Add</button> 
                 </form>
-
+                {/*Optional to fill in. If email is provided, it is stored in the useState() and used to pass to the server via ser-req function*/}
                 <label>Existing player, email: <input type="email" value={existingEmail} onChange={(e) => setExistingEmail(e.target.value)}/></label>
+                {/*Trigger the server-requesting function*/}
                 <button onClick={addExistingPlayer}>Search and Add</button>
                    
             </Modal>
@@ -776,13 +790,14 @@ const DisplayPlayers = () => {
                 
                 <form onSubmit={editPlayerDetails} style={{ display: 'flex', flexDirection: 'column' }}>
                    
-                    <label>Name: 
+                    <label>Name:
+                        {/*If the current user is the player creator -> enable the input field*/} 
                         {tournamentDetails.user_id === createdBy ? (
                             <input type="text" value={name} onChange={(e) => setName(e.target.value)} required />
                         ) : (
+                            //disable otherwise
                             <input type="text" value={name} disabled />  
-                        )}
-                         
+                        )}   
                     </label>
 
                     <label>Email: 
@@ -811,20 +826,19 @@ const DisplayPlayers = () => {
                         <input type="text" value={addPoints} onChange={(e) => setAddPoints(e.target.value)} min={0}/> 
                     </label>
 
+                    {/*If current tournament is of knockout type, display eliminated status*/}
                     {tournamentDetails.type === "Knockout" ? (
                         <label>Eliminated: 
                             {eliminated ? (
                                 <input type="text" value={"Yes"} disabled/> 
                             ):(
                                 <input type="text" value={"No"} disabled/> 
-                            )}
-                            
+                            )} 
                         </label>
-                    ):(
-                        null
-                    )}
+                    //do not disply it otherwise 
+                    ):( null )}
                     
-                    <button type="submit">Save</button> 
+                    <button type="submit">Save</button>
                 </form>
                 
                 {tournamentDetails.status === "initialised" ? (<button onClick={openModalRemConf}>Remove Player</button>) : (null)}
@@ -875,15 +889,16 @@ const DisplayPlayers = () => {
 
             {/* Add Forbidden Pair Modal */}
             <Modal isOpen={isModalOpenAddForbPair} onClose={closeModalAddForbPair} title="Add a Pair" errorDisplay={error}>
-                
+                {/*First Player*/}
                  <label> Player 1:
                     <select value={player1ID} onChange={(e) => setPlayer1ID(Number(e.target.value))} required>
+                        {/*Use mapping to provide a dynamic list of players to choose from*/}
                         {listPlayersTable.map((player) => (
                             <option key={player.player_id} value={player.player_id}>{player.name}</option>
                         ))}
                     </select>
                 </label>
-
+                {/*First Player*/}
                 <label> Player 2:
                     <select value={player2ID} onChange={(e) => setPlayer2ID(Number(e.target.value))} required>
                         {listPlayersTable.map((player) => (

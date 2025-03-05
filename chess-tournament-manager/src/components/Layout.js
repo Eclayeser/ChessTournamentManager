@@ -5,82 +5,67 @@ import { Outlet, useNavigate, useLocation } from "react-router-dom";
 // Functional component
 function Layout() {
     
-    //variable
-    const [loggedIn, setLoggedIn] = useState(false);
-
     //react-router-dom hooks
-    const location = useLocation();
     const navigate = useNavigate();
 
-    //function that navigates to login page
-    const goToLogin = () => {navigate("/login")};
-
-    const goToDashboard = () => {navigate("/dashboard")};
-
-    const goToHome = () => {navigate("/")};
- 
-    const goToAccount = () => {navigate("/account")};
-
-    //change loggedIn state based on sessionID presence, triggered by useEffect
-    useEffect(() => {
-        if (localStorage.getItem("sessionID")) {
-            setLoggedIn(true);
-        } else {
-            setLoggedIn(false);
-        };
-    }, [location]);
-
-  
     //Display contents
   return (
-    <div>
+    <div className="d-flex flex-column min-vh-100">
         {/*Header*/}
-        <header>
+        <header className="navbar navbar-expand-lg navbar-dark bg-primary px-4 py-3">
             
-            <div>
+            <div className="container-fluid"> 
+                
                 {/*Places Logo image*/}
-                <img src={require('../images/test_logo.png')} alt="Logo"/>
-           </div>
+                <img src={require('../images/ChessTMLogo.png')} alt="Logo" height="50"/>
+                
+                
 
-           <div>
-                {/* Display navigation buttons based on loggedIn state */}
-                {loggedIn ? (
-                    <div>
-                        <button onClick={goToDashboard}>My Tournaments</button>
-                        <button onClick={goToAccount}>My Account</button>
-                        <button onClick={goToHome}>Home</button>
-                    </div>
-                ) : (
-                    <button onClick={goToLogin}>Log In</button>
-                )}
-                <hr></hr>
-           </div>
+                <div className="ms-auto">
+                        {/*If sessionID is present, display different buttons*/}
+                        { localStorage.getItem("sessionID") ? (
+                            <div>
+                                <button className="btn btn-outline-light me-2" onClick={() => navigate("/dashboard")}>My Tournaments</button>
+                                <button className="btn btn-outline-light me-2" onClick={() => navigate("/account")}>My Account</button>
+                                <button className="btn btn-outline-light" onClick={() => navigate("/")}>Home</button>
+                            </div>
+                        ) : (
+                            <button className="btn btn-light" onClick={() => navigate("/login")}>Log In</button>
+                        )}
+                </div>
+            </div>
 
         </header>
 
         {/*Wrapped around*/}
-        <main><Outlet /></main>
+        <main className="flex-grow-1"><Outlet /></main>
 
         {/*Footer*/}
-        <footer>
+        <footer className="bg-dark text-light py-4">
 
-            <div>
-                <hr></hr>
-                {/*Places Logo image*/}
-                <img src={require('../images/test_logo.png')} alt="Logo"/>
-           </div>
+            <div className="container">
 
-           <div>
-                {/*Contant Us Email*/}
-                <a href="mailto:mark.tarnavskyy@gmail.com">Contact Us</a>
-                {/*Try Service button - to be enabled later*/}
-                <button onClick={goToLogin}>Try Service</button>
-           </div>
+                <div className="row align-items-center text-center text-md-start">
 
-           <div>
-                {/*Other Information - to be added later*/}
-                <p>*to be filled later*</p>
-           </div>
+                    {/*Places Logo image*/}
+                    <div className="col-md-3 mb-3 mb-md-0">
+                        <img src={require('../images/ChessTMLogo.png')} alt="Logo"  height="50" />
+                    </div>
+
+                    {/* Contact & Try Service (Center) */}
+                    <div className="col-md-6">
+                        <a href="mailto:mark.tarnavskyy@gmail.com" className="text-info text-decoration-none me-3">Contact Us</a>
+                        <button className="btn btn-outline-light" onClick={() => navigate("/login")}>Try Service</button>
+                    </div>
+
+                    <div className="col-md-3 text-md-end">
+                        {/*Other Information - to be added later*/}
+                        <p>2025</p>
+                    </div>
+
+                </div>    
+
+            </div>
            
         </footer>   
     </div>

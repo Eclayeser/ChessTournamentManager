@@ -14,10 +14,10 @@ CREATE TABLE users(
 );
 
 
---insert data into entity <users>
+--insert a record into entity <users>
 INSERT INTO users (username, password, firstname, surname, email)
-VALUES ('TestUser_1', 'pass1', 'NestaykoNestaykovuch', 'Nestaykov', 'nest@g.com');
---Boundary Data: firstname (20 characters long)
+VALUES ('user1', 'pass1', 'Nestr', 'Lobonov', 'nest@g.com');
+
 
 --select all rows from entity <users>
 SELECT * FROM users;
@@ -35,43 +35,42 @@ WHERE user_id = 1;
 
 --create entity <tournaments>
 CREATE TABLE tournaments(
-    tournament_id SERIAL PRIMARY KEY,             --field for tournament ID, autoincrement, primary key
+    tournament_id SERIAL PRIMARY KEY,        --field for tournament ID, autoincrement, primary key
     user_id INT REFERENCES users(user_ID) NOT NULL ON DELETE CASCADE, 
     --field for user ID, foreign key, delete dependent records, not null
-    name VARCHAR(50) NOT NULL,                    --field for tournament name, 50 characters max, not null
-    type TEXT NOT NULL,                           --field for tournament type, text, not null
-    max_rounds SMALLINT CHECK (max_rounds > 0 AND max_rounds <= 1000) NOT NULL,
-    --field for total number of rounds, integer, not null, check is between 1 and 50
-    max_participants SMALLINT CHECK (max_participants > 0 AND max_participants <= 1000) NOT NULL,
-    --field for maximum number of players, integer, not null, check is between 1 and 1000
-    bye_value FLOAT NOT NULL,                     --field for bye value, float, not null
-    tie_break TEXT,                               --field for tie break type, text
-    hide_rating BOOLEAN NOT NULL,                 --field for hide rating instruction, boolean, not null
+    name VARCHAR(50) NOT NULL,               --field for tournament name, 50 characters max, not null
+    type TEXT NOT NULL,                      --field for tournament type, text, not null
+    bye_value FLOAT NOT NULL,                --field for bye value, float, not null
+    tie_break TEXT,                          --field for tie break type, text
+    hide_rating BOOLEAN NOT NULL,            --field for hide rating instruction, boolean, not null
+    status TEXT NOT NULL                     --field for tournament status, text, not null
 );
 
 
 --insert data into entity <tournaments>
-INSERT INTO tournaments (user_id, name, type, num_rounds, max_players, bye_value, tie_break, hide_rating)
-VALUES (5, 'TestTournament_1', 'Round-robin', 5, 1000, 0.5, 'test_tie_break', TRUE);
+INSERT INTO tournaments (user_id, name, type, bye_value, tie_break, hide_rating, status)
+VALUES (1, 'Challenger', 'Swiss System', 1, 'Buchholz Cut 1', TRUE, 'initialised');
 
 INSERT INTO tournaments (user_id, name, type, num_rounds, max_players, bye_value, tie_break, hide_rating)
 VALUES (6, 'TestTournament_8', 'test_type', 7, 10, 1, 'test_tie_break', TRUE);
 --Boundary Data: max_players (1000)
 
---update data under hide_ratinh column where tournament_id = 1
+--updata data under hide_rating column where tournament_id = 1
 UPDATE tournaments
-SET max_participants = 25, max_rounds = 10;
+SET hide_rating = 'Yess'
+WHERE tournament_id = 1;
 
 -------------------------------------------------------------------------------------------------------------------------
 
 --create entity <players>
 CREATE TABLE players(
-    player_id SERIAL PRIMARY KEY,  --field for player ID, autoincrement, primary key
-    name VARCHAR(50) NOT NULL,     --field for player's name, 50 characters max, not null
-    rating SMALLINT CHECK (rating >= 0 AND rating <= 4000), 
-    --field for player's rating, integer, check is between 0 and 4000
-    email VARCHAR(50),             --field for player's email, 50 characters max
-    club VARCHAR(50),              --field for player's club, 50 characters max
+    player_id SERIAL PRIMARY KEY,        --field for player ID, autoincrement, primary key
+    name VARCHAR(50) NOT NULL,           --field for player's name, 50 characters max, not null
+    rating SMALLINT CHECK (rating >= 0 AND rating <= 4000) NOT NULL, 
+    --field for player's rating, integer, check is between 0 and 4000, not null
+    email VARCHAR(50) NOT NULL,          --field for player's email, 50 characters max, not null
+    club VARCHAR(50) NOT NULL,           --field for player's club, 50 characters max, not null
+    created_by INT NOT NULL              --field for creator's ID, integer, not null
 );
 
 --i didn't make it foreign key specificly, so that the player still stays in the database if the creator was deleted, it just cannot ever be edited again
@@ -80,7 +79,8 @@ ADD COLUMN created_by INT NOT NULL;
 
 --insert data into entity <players>
 INSERT INTO players (name, rating, email, club, created_by)
-VALUES ('Terra', 1000, 'qqz@k.com', 'Bishops', 5);
+VALUES ('Terra', 1000, 'qqz@k.com', 'Bishops', 1);
+
 --Boundary Data: rating (4000)
 
 --insert into rounds
@@ -96,9 +96,9 @@ VALUES (3, 14, null, '');
 --select all rows from entity <players>
 SELECT * FROM players;
 
---delete record from entity <players> where player_id = 1
-DELETE FROM players
-WHERE player_id = 1;
+--delete record from entity <tournaments> where tournament_id = 1
+DELETE FROM tournaments
+WHERE tournament_id = 1;
 
 -------------------------------------------------------------------------------------------------------------------------
 
@@ -106,28 +106,35 @@ WHERE player_id = 1;
 CREATE TABLE entries(
     entry_id SERIAL PRIMARY KEY,            --field for entry ID, autoincrement, primary key
     tournament_id INT REFERENCES tournaments(tournament_ID) ON DELETE CASCADE NOT NULL, 
-    --field for tournament ID, foreign key, not null
+    --field for tournament ID, foreign key, delete dependent records, not null
     player_id INT REFERENCES players(player_ID) ON DELETE CASCADE NOT NULL, 
-    --field for player ID, foreign key, not null
-    additional_points FLOAT CHECK (additional_points >= 0 AND additional_points <= 50),
-    --field for additional points, float, check is between 0 and 50
+    --field for player ID, foreign key, delete dependent records, not null
+    additional_points FLOAT CHECK (additional_points >= 0 AND additional_points <= 50) NOT NULL,
+    --field for additional points, float, check is between 0 and 50, not null
     eliminated BOOLEAN NOT NULL             --field for eliminated status, boolean, not null
 );
 
+ALTER TABLE entries
+ADD COLUMN additional_points FLOAT CHECK (additional_points >= 0 AND additional_points <= 50) NOT NULL;
 
---insert data into entity <entries>
+--insert a record into entity <entries>
 INSERT INTO entries (tournament_id, player_id, additional_points, eliminated)
-VALUES (1, 1, 2, FALSE);
+VALUES (1, 3, 25, FALSE);
+
+--updata data under additional_points column where entry_id = 1
+UPDATE entries
+SET additional_points = 50.5
+WHERE entry_id = 1;
 
 
 -------------------------------------------------------------------------------------------------------------------------
 
 --create entity <rounds>
 CREATE TABLE rounds(
-    round_id SERIAL PRIMARY KEY,            --field for round ID, autoincrement, primary key
+    round_id SERIAL PRIMARY KEY,       --field for round ID, autoincrement, primary key
     tournament_id INT REFERENCES tournaments(tournament_ID) ON DELETE CASCADE NOT NULL, 
-    --field for tournament ID, foreign key, not null
-    round_number INT                        --field for round number, integer, not null
+    --field for tournament ID, foreign key, delete dependent records, not null
+    round_number INT NOT NULL          --field for round number, integer, not null
 );
 
 
@@ -141,11 +148,14 @@ VALUES (1, 1);
 
 --create entity <pairings>
 CREATE TABLE pairings(
-    pairing_id SERIAL PRIMARY KEY,            --field for pairing ID, autoincrement, primary key
-    round_id INT REFERENCES rounds(round_ID) ON DELETE CASCADE NOT NULL, --field for round ID, foreign key, not null
-    white_player_id INT REFERENCES players(player_ID) ON DELETE CASCADE, --field for white player ID, foreign key
-    black_player_id INT REFERENCES players(player_ID) ON DELETE CASCADE, --field for black player ID, foreign key
-    result VARCHAR(10) NOT NULL                --field for result, 10 characters max, not null 
+    pairing_id SERIAL PRIMARY KEY,      --field for pairing ID, autoincrement, primary key
+    round_id INT REFERENCES rounds(round_ID) ON DELETE CASCADE NOT NULL, 
+    --field for round ID, foreign key, delete dependent records, not null
+    white_player_id INT REFERENCES players(player_ID) ON DELETE CASCADE,
+    --field for white player ID, foreign key, delete dependent records
+    black_player_id INT REFERENCES players(player_ID) ON DELETE CASCADE,
+    --field for black player ID, foreign key, delete dependent records
+    result VARCHAR(10) NOT NULL         --field for result, 10 characters max, not null 
 );
 
 
@@ -155,10 +165,13 @@ CREATE TABLE pairings(
 
 --create entity <forbidden>
 CREATE TABLE forbidden(
-    pair_id SERIAL PRIMARY KEY,            --field for pair ID, autoincrement, primary key
-    player_1_id INT REFERENCES players(player_ID) ON DELETE CASCADE NOT NULL, --field for 1st player ID, foreign key, not null
-    player_2_id INT REFERENCES players(player_ID) ON DELETE CASCADE NOT NULL, --field for 2nd player ID, foreign key, not null
-    tournament_id INT REFERENCES tournaments(tournament_ID) ON DELETE CASCADE NOT NULL --field for tournament ID, foreign key, not null
+    pair_id SERIAL PRIMARY KEY,        --field for pair ID, autoincrement, primary key
+    player_1_id INT REFERENCES players(player_ID) ON DELETE CASCADE NOT NULL, 
+    --field for 1st player ID, foreign key, delete dependent records, not null
+    player_2_id INT REFERENCES players(player_ID) ON DELETE CASCADE NOT NULL,
+    --field for 2nd player ID, foreign key, delete dependent records, not null
+    tournament_id INT REFERENCES tournaments(tournament_ID) ON DELETE CASCADE NOT NULL
+    --field for tournament ID, foreign key, delete dependent records, not null
 );
 
 
@@ -167,10 +180,13 @@ CREATE TABLE forbidden(
 
 --create entity <predefined>
 CREATE TABLE predefined(
-    pair_id SERIAL PRIMARY KEY,            --field for pair ID, autoincrement, primary key
-    white_player_id INT REFERENCES players(player_ID) ON DELETE CASCADE NOT NULL, --field for white player ID, foreign key, not null
-    black_player_id INT REFERENCES players(player_ID) ON DELETE CASCADE NOT NULL, --field for black player ID, foreign key, not null
-    tournament_id INT REFERENCES tournaments(tournament_ID) ON DELETE CASCADE NOT NULL --field for tournament ID, foreign key, not null
+    pair_id SERIAL PRIMARY KEY,        --field for pair ID, autoincrement, primary key
+    white_player_id INT REFERENCES players(player_ID) ON DELETE CASCADE NOT NULL,
+    --field for white player ID, foreign key, delete dependent records, not null
+    black_player_id INT REFERENCES players(player_ID) ON DELETE CASCADE NOT NULL,
+    --field for black player ID, foreign key, delete dependent records, not null
+    tournament_id INT REFERENCES tournaments(tournament_ID) ON DELETE CASCADE NOT NULL
+    --field for tournament ID, foreign key, delete dependent records, not null
 );
 
 
@@ -438,7 +454,8 @@ GROUP BY type, max_rounds;
 
 SELECT round_id FROM rounds WHERE tournament_id = 16 ORDER BY round_number DESC LIMIT 1;
 
-
+alter table tournaments
+add column status TEXT NOT NULL;
 
 
 SELECT 
@@ -494,10 +511,99 @@ WHERE rounds.tournament_id = 16 AND rounds.round_number = 1 AND players.player_i
 
 SELECT pairings.result FROM pairings WHERE player_id = 13 ORDER BY round DESC LIMIT 1;
 
-SELECT forbidden.pair_id, forbidden.player_1_id, p1.name AS player_1_name, forbidden.player_2_id, p2.name AS player_2_name
-            FROM forbidden
-            JOIN players p1 ON forbidden.player_1_id = p1.player_id
-            JOIN players p2 ON forbidden.player_2_id = p2.player_id
-            JOIN tournaments ON forbidden.tournament_id = tournaments.tournament_id
-            JOIN entries ON tournaments.tournament_id = entries.tournament_id  
-            WHERE forbidden.tournament_id = 22 AND entries.eliminated = false;
+SELECT 
+    p.white_player_id AS player_id,
+    CASE 
+        WHEN p.result = '1-0' THEN 1.0 
+        WHEN p.result = '1/2-1/2' THEN 0.5 
+        WHEN p.result = 'bye' THEN 0.5
+        ELSE 0.0 
+    END AS points
+FROM pairings p
+JOIN rounds r ON p.round_id = r.round_id
+WHERE r.tournament_id = 23 AND r.round_number < 3
+
+UNION ALL
+
+SELECT 
+    p.black_player_id AS player_id,
+CASE 
+    WHEN p.result = '0-1' THEN 1.0 
+    WHEN p.result = '1/2-1/2' THEN 0.5
+    ELSE 0.0 
+END AS points
+FROM pairings p
+JOIN rounds r ON p.round_id = r.round_id
+WHERE r.tournament_id = 23 AND r.round_number < 3 AND p.black_player_id iS NOT NULL;
+
+
+SELECT 
+    r.round_number, 
+    p.result,
+    CASE 
+        WHEN (p.white_player_id = $1 AND p.result = '1-0') OR 
+             (p.black_player_id = $1 AND p.result = '0-1') THEN 'W'
+        WHEN (p.white_player_id = $1 AND p.result = '0-1') OR 
+             (p.black_player_id = $1 AND p.result = '1-0') THEN 'L'
+        WHEN p.result = '1/2-1/2' THEN 'D'
+        WHEN p.result = 'bye' THEN 'B'
+        ELSE 'U'
+    END AS outcome
+FROM pairings p
+JOIN rounds r ON p.round_id = r.round_id
+WHERE (p.white_player_id = $1 OR p.black_player_id = $1)
+  AND r.tournament_id = $2 AND r.round_number < $3
+ORDER BY r.round_number ASC;
+
+
+SELECT 
+    r.round_number, 
+    p.result,
+    p.white_player_id,
+    p.black_player_id,
+    CASE 
+        WHEN (p.white_player_id = 17 AND p.result = '1-0') OR 
+             (p.black_player_id = 17 AND p.result = '0-1') THEN 'W'
+        WHEN (p.white_player_id = 17 AND p.result = '0-1') OR 
+             (p.black_player_id = 17 AND p.result = '1-0') THEN 'L'
+        WHEN p.result = '1/2-1/2' THEN 'D'
+        WHEN p.result = 'bye' THEN 'B'
+        ELSE 'U'
+    END AS outcome
+FROM pairings p
+JOIN rounds r ON p.round_id = r.round_id
+WHERE (p.white_player_id = 17 OR p.black_player_id = 17)
+  AND r.tournament_id = 23 AND r.round_number < 6
+ORDER BY r.round_number ASC;
+
+
+SELECT pg_get_serial_sequence('users', 'user_id');
+ALTER SEQUENCE public.predefined_pair_id_seq RESTART WITH 1;
+
+
+
+
+SELECT 
+    p.white_player_id AS player_id,
+    CASE 
+        WHEN p.result = '1-0' THEN 1.0 
+        WHEN p.result = '1/2-1/2' THEN 0.5 
+        WHEN p.result = 'bye' THEN 3
+        ELSE 0.0 
+    END AS points
+FROM pairings p
+JOIN rounds r ON p.round_id = r.round_id
+WHERE r.tournament_id = 4 AND r.round_number < 2
+
+UNION ALL
+
+SELECT 
+    p.black_player_id AS player_id,
+CASE 
+    WHEN p.result = '0-1' THEN 1.0 
+    WHEN p.result = '1/2-1/2' THEN 0.5
+    ELSE 0.0 
+END AS points
+FROM pairings p
+JOIN rounds r ON p.round_id = r.round_id
+WHERE r.tournament_id = 4 AND r.round_number < 2 AND p.black_player_id iS NOT NULL;

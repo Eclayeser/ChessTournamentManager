@@ -11,7 +11,8 @@ function Home() {
       <div>
           <h1>Welcome to Chess Manager</h1>
 
-          {/*If sessionID is present, display nothing, else display message and links to login and signup pages*/}
+          {/*If sessionID is present, display nothing*/}
+          {/*else, display message and links to login and signup pages*/} 
           { localStorage.getItem("sessionID") ? (null) : (
             <div>
               <p>Please log in or sign up to continue.</p>

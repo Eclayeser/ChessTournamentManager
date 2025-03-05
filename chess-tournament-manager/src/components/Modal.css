@@ -1,27 +1,31 @@
+/* Styles for the modal overlay */
 .modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.75);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-  }
-  
-  .modal-content {
-    background: white;
-    padding: 20px; 
-  }
-
-.error {
-    color: red;
+  position: fixed; /* Fixes the overlay to the viewport */
+  top: 0; /* Positions the overlay at the top of the viewport */
+  left: 0; /* Positions the overlay at the left of the viewport */
+  width: 100%; /* Makes the overlay span the full width of the viewport */
+  height: 100%; /* Makes the overlay span the full height of the viewport */
+  background: rgba(0, 0, 0, 0.75); /* Semi-transparent black background */
+  display: flex; /* Uses flexbox for centering the modal content */
+  justify-content: center; /* Centers the modal content horizontally */
+  align-items: center; /* Centers the modal content vertically */
+  z-index: 1000; /* Ensures the overlay is on top of other elements */
 }
 
+/* Styles for the modal content */
+.modal-content {
+  background: white; /* White background for the modal content */
+  padding: 20px; /* Adds padding inside the modal content */
+}
+
+/* Styles for error messages */
+.error {
+  color: red; /* Red text color for error messages */
+}
+
+/* Styles for success messages */
 .successMessage {
-  color: green;
+  color: green; /* Green text color for success messages */
 }
 
 
