@@ -321,7 +321,7 @@ const RoundsDisplay = () => {
             if (server_resObject.success === true) {
                 requestTournamentDetails();
                 fetchSingleRoundPairings(allRounds[allRounds.length - 1].round_id);
-                closeModalFinishConf();
+                setIsModalOpenFinishConf(false);
                 setError("");
 
             } else {
@@ -356,58 +356,50 @@ const RoundsDisplay = () => {
 
 
     return (
-        <div>
-            <h1>{tournamentDetails.name}: Rounds</h1>
+        <div className="container mt-4">
+            <h1 className="mb-3">{tournamentDetails.name}: Rounds</h1>
 
-            {(currentRoundNumber === 0 && tournamentDetails.status !== "initialised") ? (
-                <h2>Generate new round OR select from existing rounds</h2>
-            ) : (null)}
+            {(currentRoundNumber === 0 && tournamentDetails.status !== "initialised") && (
+                <h2 className="text-muted">Generate new round OR select from existing rounds</h2>
+            )}
 
-            {allRounds === null ? (
-                    <button onClick={createNewRound}>Generate next round</button>
-                ) : (null)}
+            {allRounds === null && (
+                <button className="btn btn-primary mb-3" onClick={createNewRound}>Generate Next Round</button>
+            )}
 
-            {/* Dynamic Error Message */}
-            {error && <p style={{color: "red"}}>{error}</p>}
+            {error && <p className="alert alert-danger">{error}</p>}
 
-            {/*If the tournament is initialised, display the start tournament button*/}
             {tournamentDetails.status === "initialised" ? (
-                <div>
-                    {/*Title and button to start the tournament*/}
-                    <h2>Begin the tournament:</h2>
-                    <button onClick={() => startTournament()}>Start Tournament</button>
-                    {/*Description of the start tournament button*/}
-                    <p>Once the tournament has started you will not be able to add or remove the players from the tournament</p>
+                <div className="bg-light p-4 rounded shadow-sm">
+                    <h2>Begin the Tournament:</h2>
+                    <button className="btn btn-success mb-2" onClick={startTournament}>Start Tournament</button>
+                    <p className="text-muted">Once the tournament has started, you cannot add or remove players.</p>
                 </div>
             ) : (
                 <div>
-                    {/* Display the round selection buttons */}
-                    <div>
+                    <div className="btn-group mb-3">
                         {allRounds.map((round) => (
-                            <button key={round.round_id} onClick={() => fetchSingleRoundPairings(round.round_id)}>Round {round.round_number}</button>
+                            <button key={round.round_id} className="btn btn-outline-primary" onClick={() => fetchSingleRoundPairings(round.round_id)}>
+                                Round {round.round_number}
+                            </button>
                         ))}
                     </div>
-
-                    <div>
-                        {/*If the current round is the last round and the tournament is not finished, display the generate next round button*/}
-                        {(currentRoundNumber === lastRoundNumber && tournamentDetails.status !== "finished") ? (
-                            <button onClick={createNewRound}>Generate Next Round</button>
-                        ) : (null)}
-                    </div>
-
-                    {/* Display the table of pairings */} 
-                    <div>
-                        {/*Round Table*/}
-                        <table style={{ border: "1px solid black" }}>
-                            <thead>
+                    
+                    {(currentRoundNumber === lastRoundNumber && tournamentDetails.status !== "finished") && (
+                        <button className="btn btn-primary mb-3" onClick={createNewRound}>Generate Next Round</button>
+                    )}
+                    
+                    <div className="table-responsive">
+                        <table className="table table-striped table-bordered text-center">
+                            <thead className="table-dark">
                                 <tr>
                                     <th>Position</th>
                                     <th>White Player</th>
-                                    {tournamentDetails.hide_rating ? (null):(<th>Rating</th>)}
+                                    {!tournamentDetails.hide_rating && <th>Rating</th>}
                                     <th>Pts</th>
                                     <th>Result</th>
                                     <th>Pts</th>
-                                    {tournamentDetails.hide_rating ? (null):(<th>Rating</th>)}
+                                    {!tournamentDetails.hide_rating && <th>Rating</th>}
                                     <th>Black Player</th>
                                 </tr>
                             </thead>
@@ -415,74 +407,64 @@ const RoundsDisplay = () => {
                                 {allSingleRoundPairings.map((pairing, index) => (
                                     <tr key={pairing.pairing_id}>
                                         <td>{index + 1}</td>
-                                        
                                         <td>{pairing.white_player_name}</td>
-                                        {/*If hide rating is false, display the rating*/}
-                                        {tournamentDetails.hide_rating ? (null):(<th>{pairing.white_player_rating}</th>)}
+                                        {!tournamentDetails.hide_rating && <td>{pairing.white_player_rating}</td>}
                                         <td>{pairing.white_player_points}</td>
-                                        {currentRoundNumber === allRounds[allRounds.length - 1].round_number ? (
-                                            pairing.result === "bye" ? (
-                                                <td>{pairing.result}</td>
-                                            ) : (
-                                                tournamentDetails.status === "finished" ? (
-                                                    <td>{pairing.result}</td>
+                                        <td>
+                                            {currentRoundNumber === allRounds[allRounds.length - 1].round_number && tournamentDetails.status !== "finished" ? (
+                                                pairing.result === "bye" ? (
+                                                    pairing.result
                                                 ) : (
-                                                <td>
-                                                    {/*Dropdown for result selection*/}
-                                                    <select onChange={(e) => setResult(pairing.pairing_id, e.target.value)}>
-                                                        <option value = {pairing.result} selected disabled hidden>{pairing.result}</option>
+                                                    <select className="form-select" onChange={(e) => setResult(pairing.pairing_id, e.target.value)}>
+                                                        <option value={pairing.result} selected disabled hidden>{pairing.result}</option>
                                                         <option value="-">-</option>
                                                         <option value="1-0">1-0</option>
                                                         <option value="1/2-1/2">1/2-1/2</option>
                                                         <option value="0-1">0-1</option>
                                                     </select>
-                                                </td>
-                                            ))
-                                        ) : (
-                                            <td>{pairing.result}</td>
-                                        )}
+                                                )
+                                            ) : (
+                                                pairing.result
+                                            )}
+                                        </td>
                                         <td>{pairing.black_player_points}</td>
-                                        {tournamentDetails.hide_rating ? (null):(<th>{pairing.black_player_rating}</th>)}
+                                        {!tournamentDetails.hide_rating && <td>{pairing.black_player_rating}</td>}
                                         <td>{pairing.black_player_name}</td>
                                     </tr>
                                 ))}
                             </tbody>
                         </table>
-
-                        <button onClick={saveCSV}>Save CSV</button>
-
-                        <br></br>
-                        {/*If the current round is the last round and the tournament is not finished, display the finish tournament button*/}
-                        {(currentRoundNumber === lastRoundNumber && tournamentDetails.status !== "finished") ? (
-                            <button onClick={openModalFinishConf}>Finish Tournament</button>
-                        ) : (null)}
-
-                        {/*If there are any rounds OR the tournament status is "finished", stop displaying this button*/}
-                        {(currentRoundNumber === 0 || tournamentDetails.status === "finished") ? (null) : (
-                            <button onClick={deleteLastRoundPairings}>Delete Last Round</button>
-                        )}
-
                     </div>
-                </div>  
+                    
+                    <button className="btn btn-secondary me-2" onClick={saveCSV}>Save CSV</button>
+
+                    {(currentRoundNumber === lastRoundNumber && tournamentDetails.status !== "finished") && (
+                        <button className="btn btn-warning me-2" onClick={openModalFinishConf}>Finish Tournament</button>
+                    )}
+
+                    {(currentRoundNumber !== 0 && tournamentDetails.status !== "finished") && (
+                        <button className="btn btn-danger" onClick={deleteLastRoundPairings}>Delete Last Round</button>
+                    )}
+                </div>
             )}
 
-            <div>
-                <button onClick={() => navigate(`/tournament/${tournamentId}/standings`)}>Standings</button>
-                <button onClick={() => navigate(`/tournament/${tournamentId}/players`)}>Players</button>
-                <button onClick={() => navigate(`/tournament/${tournamentId}/rounds`)}>Rounds</button>
-                <button onClick={() => navigate(`/tournament/${tournamentId}/settings`)}>Settings</button>
-            </div> 
+            <div className="btn-group mt-4">
+                <button className="btn btn-outline-primary" onClick={() => navigate(`/tournament/${tournamentId}/standings`)}>Standings</button>
+                <button className="btn btn-outline-primary" onClick={() => navigate(`/tournament/${tournamentId}/players`)}>Players</button>
+                <button className="btn btn-outline-secondary active" disabled>Rounds</button>
+                <button className="btn btn-outline-primary" onClick={() => navigate(`/tournament/${tournamentId}/settings`)}>Settings</button>
+            </div>
 
-            {/* Finish Tournament Confirmation Pop-up */}
             <Modal isOpen={isModalOpenFinishConf} onClose={closeModalFinishConf} title="Finish This Tournament">
-                
-                <h3>Are you sure you want to finish this tournament tournament?</h3>
-                <p> No more rounds will be generated or deleted.</p>
-                <button onClick={finishTournament}>Confirm</button>
-                <button onClick={closeModalFinishConf}>Cancel</button>
-
-            </Modal>  
-
+                <div className="text-center">
+                    <h3 className="text-danger">Are you sure?</h3>
+                    <p>No more rounds will be generated or deleted.</p>
+                    <div className="d-flex justify-content-center gap-2">
+                        <button className="btn btn-danger" onClick={finishTournament}>Confirm</button>
+                        <button className="btn btn-secondary" onClick={closeModalFinishConf}>Cancel</button>
+                    </div>
+                </div>
+            </Modal>
         </div>
     );
 };

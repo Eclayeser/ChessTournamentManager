@@ -504,7 +504,9 @@ const DisplayPlayers = () => {
     };
 
 
+
     const fetchSpecialPairs = async (type) => {
+        
         try {
             const sessionID = localStorage.getItem("sessionID");
 
@@ -558,7 +560,9 @@ const DisplayPlayers = () => {
     };
 
     const removeSpecialPair = (pair_id, type) => async () => {
+        console.log(pair_id);
         try {
+            
             const sessionID = localStorage.getItem("sessionID");
             const body = { pair_id: pair_id };
 
@@ -613,6 +617,7 @@ const DisplayPlayers = () => {
            
 
     const addSpecialPair = async (type) => {
+        
         setError("");
 
          try{
@@ -701,267 +706,447 @@ const DisplayPlayers = () => {
     //Display the component
     return (
         <div>
-            <h2>{tournamentDetails.name}: Players</h2>
+            <div class="container mt-4">
+                <h1 class="mb-3">{tournamentDetails.name}: Players</h1>
 
-            {successMessage && <p style={{color:'green'}}>{successMessage}</p>}
+                {successMessage && <p class="alert alert-success">{successMessage}</p>}
 
-            <div>
-                {/*Add Player button is displayed only if the tournament is initialised*/}
-                {tournamentDetails.status === "initialised" ? (<button onClick={openModalAddPlayer}>Add Player</button>) : (null)}
+                <div class="d-flex flex-column gap-3">
+                    {tournamentDetails.status === "initialised" && (
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-primary" onClick={openModalAddPlayer}>Add Player</button>
+                        </div>
+                    )}
 
-                {/*Display Forbidden and Predefined Pairs buttons only if the tournament is not finished */}
-                {tournamentDetails.status !== "finished" ?(
-                    <div>
-                        <button onClick={openModalForbPairs}>Forbidden Pairs</button>
-                        <button onClick={openModalPredPairs}>Predefined Pairs</button>
+                    {tournamentDetails.status !== "finished" && (
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-outline-secondary" onClick={openModalForbPairs}>Forbidden Pairs</button>
+                            <button class="btn btn-outline-secondary" onClick={openModalPredPairs}>Predefined Pairs</button>
+                        </div>
+                    )}
+
+                    <div class="table-responsive">
+                        {/* table-responsive: makes the table scalable */}
+                        {/* this is important since some tables increase in number of columns */}
+                        <table class="table table-striped table-bordered table-hover text-center">
+                            {/* 
+                                table: defined table structure style
+                                table-striped: zebra-striping for each row for easier distinguishing                                table-bordered: Adds borders to all table cells.
+                                table-hover: hover effect (only for "player" table since the rows here are clickable).
+                                text-center: centre the text.
+                            */}
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>№</th>
+                                    <th>Name</th>
+                                    {!tournamentDetails.hide_rating && <th>Rating</th>} 
+                                    <th>Club</th>
+                                    <th>Add. Pts</th>
+                                    {tournamentDetails.type === "Knockout" && <th>Eliminated</th>}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {listPlayersTable.map((player, index) => (
+                                    <tr key={player.player_id} onClick={() => selectPlayer(player.player_id)}>
+                                        <td>{index + 1}</td>
+                                        <td>{player.name}</td>
+                                        {!tournamentDetails.hide_rating && <td>{player.rating}</td>}
+                                        <td>{player.club}</td>
+                                        <td>{player.additional_points}</td>
+                                        {tournamentDetails.type === "Knockout" && (
+                                            <td>{player.eliminated ? "Yes" : "No"}</td>
+                                        )}
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
                     </div>
-                ):(null)}
+                </div>
+    
+                <div>
+                    <button className="btn btn-secondary me-2" onClick={saveCSV}>Save CSV</button>
+                </div>
                 
+                <div class="btn-group mt-3 mb-5">
+                    <button class="btn btn-outline-primary" onClick={() => navigate(`/tournament/${tournamentId}/standings`)}>Standings</button>
+                    <button class="btn btn-outline-secondary active" disabled>Players</button>
+                    <button class="btn btn-outline-primary" onClick={() => navigate(`/tournament/${tournamentId}/rounds`)}>Rounds</button>
+                    <button class="btn btn-outline-primary" onClick={() => navigate(`/tournament/${tournamentId}/settings`)}>Settings</button>
+                </div>
 
-                {/*Table of Players*/}
-                <table style={{ border: "1px solid black" }}>
-                    <thead>
-                        <tr>
-                            <th>№</th>
-                            <th>Name</th>
-                            {tournamentDetails.hide_rating ? (null):(<th>Rating</th>)}
-                            <th>Club</th>
-                            <th>Add. Pts</th>
-                            {tournamentDetails.type === "Knockout" ? (<th>Eliminated</th>):(null)}
-                        </tr>
-                    </thead>
-                    {/*Table body*/}
-                    <tbody>
-                        {/*Map through the list of players and display their details*/}
-                        {listPlayersTable.map((player, index) => (
-                            //A row for each player with onClick event to select player
-                            <tr key={player.player_id} onClick={() =>selectPlayer(player.player_id)}>
-                                {/*Player number*/}
-                                <td>{index + 1}</td>
-                                {/*Player name and rating*/}
-                                <td>{player.name}</td>
-                                {tournamentDetails.hide_rating ? (null):(<th>{player.rating}</th>)}
-                                {/*Player club and additional points*/}
-                                <td>{player.club}</td>
-                                <td>{player.additional_points}</td>
-                                {/*Player eliminated status, ONLY for Knockout tournaments*/}
-                                {tournamentDetails.type === "Knockout" ? (
-                                    //If player is eliminated, display "Yes", else "No"
-                                    player.eliminated ? (<th> Yes </th>) 
-                                    : (<th> No </th>)
-                                ):(null)}
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-
-                <button onClick={saveCSV}>Save CSV</button>
-
-            </div>
-
-            <div>
-                <button onClick={() => navigate(`/tournament/${tournamentId}/standings`)}>Standings</button>
-                <button onClick={() => navigate(`/tournament/${tournamentId}/players`)}>Players</button>
-                <button onClick={() => navigate(`/tournament/${tournamentId}/rounds`)}>Rounds</button>
-                <button onClick={() => navigate(`/tournament/${tournamentId}/settings`)}>Settings</button>
             </div>
 
             {/*Add Player Modal*/}
             <Modal isOpen={isModalOpenAddPlayer} onClose={closeModalAddPlayer} title="Add a Participant" errorDisplay={error}>
-                
-                <form onSubmit={createNewPlayer} style={{ display: 'flex', flexDirection: 'column' }}>
-                    <label>Name: <input type="text" value={name} onChange={(e) => setName(e.target.value)} required /> </label>
-                    <label>Email: <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}/> </label>
-                    <label>Club: <input type="text" value={club} onChange={(e) => setClub(e.target.value)}/> </label>
-                    <label>Rating: <input type="number" value={rating} onChange={(e) => setRating(Number(e.target.value))} min={0} max={4000}/> </label>
-                    <label>Additional Points: <input type="number" value={addPoints} onChange={(e) => setAddPoints(Number(e.target.value))}/> </label>
-                    <button type="submit">Add</button> 
+                <form onSubmit={createNewPlayer} className="d-flex flex-column gap-3">
+                    {/* Name Field */}
+                    <div className="form-group">
+                        <label htmlFor="name" className="form-label">Name:</label>
+                        <input
+                            type="text"
+                            id="name"
+                            className="form-control"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            required
+                        />
+                    </div>
+
+                    {/* Email Field */}
+                    <div className="form-group">
+                        <label htmlFor="email" className="form-label">Email:</label>
+                        <input
+                            type="email"
+                            id="email"
+                            className="form-control"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                        />
+                    </div>
+
+                    {/* Club Field */}
+                    <div className="form-group">
+                        <label htmlFor="club" className="form-label">Club:</label>
+                        <input
+                            type="text"
+                            id="club"
+                            className="form-control"
+                            value={club}
+                            onChange={(e) => setClub(e.target.value)}
+                        />
+                    </div>
+
+                    {/* Rating Field */}
+                    <div className="form-group">
+                        <label htmlFor="rating" className="form-label">Rating:</label>
+                        <input
+                            type="number"
+                            id="rating"
+                            className="form-control"
+                            value={rating}
+                            onChange={(e) => setRating(Number(e.target.value))}
+                            min={0}
+                            max={4000}
+                        />
+                    </div>
+
+                    {/* Additional Points Field */}
+                    <div className="form-group">
+                        <label htmlFor="addPoints" className="form-label">Additional Points:</label>
+                        <input
+                            type="number"
+                            id="addPoints"
+                            className="form-control"
+                            value={addPoints}
+                            onChange={(e) => setAddPoints(Number(e.target.value))}
+                        />
+                    </div>
+
+                    {/* Add Button */}
+                    <button type="submit" className="btn btn-primary">Add</button>
                 </form>
-                {/*Optional to fill in. If email is provided, it is stored in the useState() and used to pass to the server via ser-req function*/}
-                <label>Existing player, email: <input type="email" value={existingEmail} onChange={(e) => setExistingEmail(e.target.value)}/></label>
-                {/*Trigger the server-requesting function*/}
-                <button onClick={addExistingPlayer}>Search and Add</button>
-                   
+
+                {/* Existing Player Section */}
+                <div className="mt-4">
+                    <label htmlFor="existingEmail" className="form-label">Existing player, email:</label>
+                    <input
+                        type="email"
+                        id="existingEmail"
+                        className="form-control"
+                        value={existingEmail}
+                        onChange={(e) => setExistingEmail(e.target.value)}
+                    />
+                    <button onClick={addExistingPlayer} className="btn btn-primary mt-2">Search and Add</button>
+                </div>
             </Modal>
 
             {/*Edit Player Modal*/}
             <Modal isOpen={isModalOpenEditPlayer} onClose={closeModalEditPlayer} title="Edit Player" errorDisplay={error} successDisplay={successMessage}>
-                
-                
-                <form onSubmit={editPlayerDetails} style={{ display: 'flex', flexDirection: 'column' }}>
-                   
-                    <label>Name:
-                        {/*If the current user is the player creator -> enable the input field*/} 
+                <form onSubmit={editPlayerDetails} className="d-flex flex-column gap-3">
+                    {/* Name Field */}
+                    <div className="form-group">
+                        <label htmlFor="name" className="form-label">Name:</label>
                         {tournamentDetails.user_id === createdBy ? (
-                            <input type="text" value={name} onChange={(e) => setName(e.target.value)} required />
+                            <input
+                                type="text"
+                                id="name"
+                                className="form-control"
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
+                                required
+                            />
                         ) : (
-                            //disable otherwise
-                            <input type="text" value={name} disabled />  
-                        )}   
-                    </label>
-
-                    <label>Email: 
-                        <input type="email" value={email} readOnly/> 
-                    </label>
-
-                    <label>Club: 
-                        {tournamentDetails.user_id === createdBy ? (
-                            <input type="text" value={club} onChange={(e) => setClub(e.target.value)}/> 
-                        ) : (
-                            <input type="text" value={club} disabled/> 
+                            <input
+                                type="text"
+                                id="name"
+                                className="form-control"
+                                value={name}
+                                disabled
+                            />
                         )}
-                        
-                    </label>
+                    </div>
 
-                    <label>Rating: 
+                    {/* Email Field */}
+                    <div className="form-group">
+                        <label htmlFor="email" className="form-label">Email:</label>
+                        <input
+                            type="email"
+                            id="email"
+                            className="form-control"
+                            value={email}
+                            readOnly
+                        />
+                    </div>
+
+                    {/* Club Field */}
+                    <div className="form-group">
+                        <label htmlFor="club" className="form-label">Club:</label>
                         {tournamentDetails.user_id === createdBy ? (
-                            <input type="number" value={rating} onChange={(e) => setRating(Number(e.target.value))} min={0} max={4000}/>
+                            <input
+                                type="text"
+                                id="club"
+                                className="form-control"
+                                value={club}
+                                onChange={(e) => setClub(e.target.value)}
+                            />
                         ) : (
-                            <input type="number" value={rating} disabled/>
+                            <input
+                                type="text"
+                                id="club"
+                                className="form-control"
+                                value={club}
+                                disabled
+                            />
                         )}
-                         
-                    </label>
+                    </div>
 
-                    <label>Additional Points: 
-                        <input type="text" value={addPoints} onChange={(e) => setAddPoints(e.target.value)} min={0}/> 
-                    </label>
+                    {/* Rating Field */}
+                    <div className="form-group">
+                        <label htmlFor="rating" className="form-label">Rating:</label>
+                        {tournamentDetails.user_id === createdBy ? (
+                            <input
+                                type="number"
+                                id="rating"
+                                className="form-control"
+                                value={rating}
+                                onChange={(e) => setRating(Number(e.target.value))}
+                                min={0}
+                                max={4000}
+                            />
+                        ) : (
+                            <input
+                                type="number"
+                                id="rating"
+                                className="form-control"
+                                value={rating}
+                                disabled
+                            />
+                        )}
+                    </div>
 
-                    {/*If current tournament is of knockout type, display eliminated status*/}
-                    {tournamentDetails.type === "Knockout" ? (
-                        <label>Eliminated: 
-                            {eliminated ? (
-                                <input type="text" value={"Yes"} disabled/> 
-                            ):(
-                                <input type="text" value={"No"} disabled/> 
-                            )} 
-                        </label>
-                    //do not disply it otherwise 
-                    ):( null )}
-                    
-                    <button type="submit">Save</button>
+                    {/* Additional Points Field */}
+                    <div className="form-group">
+                        <label htmlFor="addPoints" className="form-label">Additional Points:</label>
+                        <input
+                            type="text"
+                            id="addPoints"
+                            className="form-control"
+                            value={addPoints}
+                            onChange={(e) => setAddPoints(e.target.value)}
+                            min={0}
+                        />
+                    </div>
+
+                    {/* Eliminated Field (Only for Knockout Tournaments) */}
+                    {tournamentDetails.type === "Knockout" && (
+                        <div className="form-group">
+                            <label htmlFor="eliminated" className="form-label">Eliminated:</label>
+                            <input
+                                type="text"
+                                id="eliminated"
+                                className="form-control"
+                                value={eliminated ? "Yes" : "No"}
+                                disabled
+                            />
+                        </div>
+                    )}
+
+                    {/* Save Button */}
+                    <button type="submit" className="btn btn-primary">Save</button>
                 </form>
-                
-                {tournamentDetails.status === "initialised" ? (<button onClick={openModalRemConf}>Remove Player</button>) : (null)}
-                   
+
+                {/* Remove Player Button (Only for Initialised Tournaments) */}
+                {tournamentDetails.status === "initialised" && (
+                    <button onClick={openModalRemConf} className="btn btn-danger mt-3">Remove Player</button>
+                )}
             </Modal>
             
 
             {/* Remove Confirmation Pop-up */}
             <Modal isOpen={isModalOpenRemConf} onClose={closeModalRemConf} title="Remove This Player" errorDisplay={error}>
-                
-                <h3>Are you sure you want to remove this player from the tournament?</h3>
-                <p>All player's data regarding this tournaments will be permanently lost.</p>
-                <button onClick={removePlayer}>Confirm</button>
-                <button onClick={closeModalRemConf}>Cancel</button>
-
+                <div className="text-center">
+                    <h3 className="text-danger">Are you sure?</h3>
+                    <p>All player's data regarding this tournaments will be permanently lost.</p>
+                    <div className="d-flex justify-content-center gap-2">
+                        <button className="btn btn-danger" onClick={removePlayer}>Confirm</button>
+                        <button className="btn btn-secondary" onClick={closeModalRemConf}>Cancel</button>
+                    </div>
+                </div>
             </Modal>
 
             {/* Forbidden Pairs Modal */}
             <Modal isOpen={isModalOpenForbPairs} onClose={closeModalForbPairs} title="Forbidden Pairs">
-                
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Num</th>
-                            <th>Player 1</th>
-                            <th>Player 2</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-
-                    <tbody>
-                        {forbiddenPairs.map((forbPair, index) => (
-                            <tr key={forbPair.pair_id}>
-                                <td>{index + 1}</td>
-                                <td>{forbPair.player_1_name}</td>
-                                <td>{forbPair.player_2_name}</td>
-                                <td><button onClick={removeSpecialPair(forbPair.pair_id, "forbidden")}>Remove Pair</button></td>
-                                {/**() => removeSpecialPair(forbPair.pair_id, "forbidden") */}
+                <div className="table-responsive">
+                    <table className="table table-bordered text-center">
+                        {/* Simialr as previous, but does not zebra strips */}
+                        <thead className="table-primary"> {/* Blue header instead */}
+                            <tr>
+                                <th>Num</th>
+                                <th>Player 1</th>
+                                <th>Player 2</th>
+                                <th></th>
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            {forbiddenPairs.map((forbPair, index) => (
+                                <tr key={forbPair.pair_id}>
+                                    <td>{index + 1}</td>
+                                    <td>{forbPair.player_1_name}</td>
+                                    <td>{forbPair.player_2_name}</td>
+                                    <td>
+                                        <button 
+                                            className="btn btn-danger btn-sm"
+                                            //btn-danger: red button
+                                            //btn-sm: small button
+                                            onClick={removeSpecialPair(forbPair.pair_id, "forbidden")}
+                                        >
+                                            Remove Pair
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
 
-                <button onClick={openModalAddForbPair}>Add Pair</button>
-
+                <button className="btn btn-primary mt-3" onClick={openModalAddForbPair}>Add Pair</button>
             </Modal>
 
 
             {/* Add Forbidden Pair Modal */}
             <Modal isOpen={isModalOpenAddForbPair} onClose={closeModalAddForbPair} title="Add a Pair" errorDisplay={error}>
-                {/*First Player*/}
-                 <label> Player 1:
-                    <select value={player1ID} onChange={(e) => setPlayer1ID(Number(e.target.value))} required>
-                        {/*Use mapping to provide a dynamic list of players to choose from*/}
-                        {listPlayersTable.map((player) => (
-                            <option key={player.player_id} value={player.player_id}>{player.name}</option>
-                        ))}
-                    </select>
-                </label>
-                {/*First Player*/}
-                <label> Player 2:
-                    <select value={player2ID} onChange={(e) => setPlayer2ID(Number(e.target.value))} required>
-                        {listPlayersTable.map((player) => (
-                            <option key={player.player_id} value={player.player_id}>{player.name}</option>
-                        ))}
-                    </select>
-                </label>
-                
-                <button onClick={() => addSpecialPair("forbidden")}>Add</button>
+                <form className="d-flex flex-column gap-3">
+                    {/* Player 1 */}
+                    <div className="form-group">
+                        <label htmlFor="player1" className="form-label">Player 1:</label>
+                        <select
+                            id="player1"
+                            className="form-select"
+                            value={player1ID}
+                            onChange={(e) => setPlayer1ID(Number(e.target.value))}
+                            required
+                        >
+                            {listPlayersTable.map((player) => (
+                                <option key={player.player_id} value={player.player_id}>{player.name}</option>
+                            ))}
+                        </select>
+                    </div>
 
+                    {/* Player 2 */}
+                    <div className="form-group">
+                        <label htmlFor="player2" className="form-label">Player 2:</label>
+                        <select
+                            id="player2"
+                            className="form-select"
+                            value={player2ID}
+                            onChange={(e) => setPlayer2ID(Number(e.target.value))}
+                            required
+                        >
+                            {listPlayersTable.map((player) => (
+                                <option key={player.player_id} value={player.player_id}>{player.name}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* Add Button */}
+                    <button className="btn btn-primary" onClick={(e) => { e.preventDefault(); addSpecialPair("forbidden")}}>Add</button>
+                </form>
             </Modal>
 
             {/* Predefined Pairs Modal */}
             <Modal isOpen={isModalOpenPredPairs} onClose={closeModalPredPairs} title="Predefined Pairs">
-                
-            <table>
-                <thead>
-                    <tr>
-                        <th>Num</th>
-                        <th>White</th>
-                        <th>Black</th>
-                        <th></th>
-                    </tr>
-                </thead>
-            
-                <tbody>
-                    {predefinedPairs.map((predPair, index) => (
-                        <tr key={predPair.pair_id}>
-                            <td>{index + 1}</td>
-                            <td>{predPair.player_1_name}</td>
-                            <td>{predPair.player_2_name}</td>
-                            <td><button onClick={removeSpecialPair(predPair.pair_id, "predefined")}>Remove Pair</button></td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
-            
-            <button onClick={openModalAddPredPair}>Add Pair</button>
-            
+                <div className="table-responsive">
+                    <table className="table table-bordered text-center">
+                        <thead className="table-primary"> {/* Blue header */}
+                            <tr>
+                                <th>Num</th>
+                                <th>White</th>
+                                <th>Black</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {predefinedPairs.map((predPair, index) => (
+                                <tr key={predPair.pair_id}>
+                                    <td>{index + 1}</td>
+                                    <td>{predPair.player_1_name}</td>
+                                    <td>{predPair.player_2_name}</td>
+                                    <td>
+                                        <button 
+                                            className="btn btn-danger btn-sm" 
+                                            onClick={removeSpecialPair(predPair.pair_id, "predefined")}
+                                        >
+                                            Remove Pair
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+
+                <button className="btn btn-primary mt-3" onClick={openModalAddPredPair}>Add Pair</button>
             </Modal>
             
             
             {/* Add Predefined Pair Modal */}
             <Modal isOpen={isModalOpenAddPredPair} onClose={closeModalAddPredPair} title="Add a Pair" errorDisplay={error}>
-            
-                <label> White:
-                    <select value={player1ID} onChange={(e) => setPlayer1ID(Number(e.target.value))} required>
-                        {listPlayersTable.map((player) => (
-                            <option key={player.player_id} value={player.player_id}>{player.name}</option>
-                        ))}
-                    </select>
-                </label>
+                <form className="d-flex flex-column gap-3">
+                    {/* White Player */}
+                    <div className="form-group">
+                        <label htmlFor="whitePlayer" className="form-label">White:</label>
+                        <select
+                            id="whitePlayer"
+                            className="form-select"
+                            value={player1ID}
+                            onChange={(e) => setPlayer1ID(Number(e.target.value))}
+                            required
+                        >
+                            {listPlayersTable.map((player) => (
+                                <option key={player.player_id} value={player.player_id}>{player.name}</option>
+                            ))}
+                        </select>
+                    </div>
 
-                <label> Black:
-                <select value={player2ID} onChange={(e) => setPlayer2ID(Number(e.target.value))} required>
-                    {listPlayersTable.map((player) => (
-                        <option key={player.player_id} value={player.player_id}>{player.name}</option>
-                    ))}
-                </select>
-                </label>
+                    {/* Black Player */}
+                    <div className="form-group">
+                        <label htmlFor="blackPlayer" className="form-label">Black:</label>
+                        <select
+                            id="blackPlayer"
+                            className="form-select"
+                            value={player2ID}
+                            onChange={(e) => setPlayer2ID(Number(e.target.value))}
+                            required
+                        >
+                            {listPlayersTable.map((player) => (
+                                <option key={player.player_id} value={player.player_id}>{player.name}</option>
+                            ))}
+                        </select>
+                    </div>
 
-                <button onClick={() => addSpecialPair("predefined")}>Add</button>
-            
+                    {/* Add Button */}
+                    <button className="btn btn-primary" onClick={(e) => { e.preventDefault(); addSpecialPair("predefined")}}>Add</button>
+                </form>
             </Modal>
 
         </div>

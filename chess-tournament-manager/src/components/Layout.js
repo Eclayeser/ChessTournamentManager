@@ -17,7 +17,7 @@ function Layout() {
             <div className="container-fluid"> 
                 
                 {/*Places Logo image*/}
-                <img src={require('../images/ChessTMLogo.png')} alt="Logo" height="50"/>
+                <img src={require('../images/ChessTMLogo.png')} alt="Logo" height="75"/>
                 
                 
 
@@ -60,7 +60,7 @@ function Layout() {
 
                     <div className="col-md-3 text-md-end">
                         {/*Other Information - to be added later*/}
-                        <p>2025</p>
+                        <p>Inspired by <b>ECF</b> - 2025</p>
                     </div>
 
                 </div>    

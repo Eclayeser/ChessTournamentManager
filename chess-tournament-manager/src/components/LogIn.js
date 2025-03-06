@@ -59,30 +59,62 @@ const LoginUser = () => {
         };
     }, []);
 
-    //className="bg-dark text-light min-vh-100 d-flex align-items-center justify-content-center"
     //Display contents
     return (
-        <div className="container d-flex flex-column align-items-center justify-content-center vh-100">
+        <div className="container d-flex flex-column align-items-center justify-content-center vh-70 mt-5">
+            {/* 
+                container d-flex: defines a flexible container
+                flex-column: all its children in a column.
+                align-items-center justify-content-center:centre them horizontally and vertically
+                vh-70 mt-5: 70% occuping height and margin to the top
+            */}
             {/*Title*/}
             <h1 className="mb-4">Log In to ChessManager</h1>
             
             {/* Dynamic Error Message */}
             {error && <p className="text-danger">{error}</p>}
             
-            {/* Form to log in */}
+            {/* Form */}
             <form onSubmit={authenticate} className="w-50 p-4 border rounded shadow bg-light">
-
+                {/* 
+                    w-50 bg-light: width 50% with white background
+                    p-4: padding on all sides
+                    border rounded shadow: rounded border around the form with shadow effect
+                */}
                 {/* Input Fields */}
                 <div className="mb-3">
-                    <label className="form-label">Username: <input type="text" value={username} onChange={e => setUsername(e.target.value)} required/></label>
+                    <label className="form-label">Username:</label>
+                    <input
+                        type="text"
+                        className="form-control"
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                        required
+                    />
+                    {/* 
+                        mb-3: margin on the bottom.
+                        form-label: defined general Bootstrap label style.
+                        form-control: defined general Bootstrap inut field style.
+                    */}
                 </div>
-                
-                <div className="mb-3">
-                    <label className="form-label">Password: <input type="password" value={password} onChange={e => setPassword(e.target.value)} required/></label>
-                </div>
-                
-                <button type="submit" className="btn btn-primary w-100">Log In</button>
 
+                <div className="mb-3">
+                    <label className="form-label">Password:</label>
+                    <input
+                        type="password"
+                        className="form-control"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                    />
+                </div>
+
+                {/* Submit Button */}
+                <button type="submit" className="btn btn-primary w-100">Log In</button>
+                {/* 
+                    btn-primary: primary colour for general purpose buttons
+                    w-100: 100% (of the form width).
+                */}
             </form>
 
             {/* Links to home and signup pages */}

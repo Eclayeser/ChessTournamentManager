@@ -51,67 +51,75 @@ const CreateTournamentDisplay = () => {
     };
 
     return (
-        <div>
-            <h1>Create Tournament</h1>
-            {error && <p className="error">{error}</p>}
+        <div className="container mt-4 mb-5">
+            {/* Title */}
+            <h1 className="text-primary text-center mb-4">Create Tournament</h1>
 
-            <form onSubmit={createTournament} style={{ display: "flex", flexDirection: "column", maxWidth: "400px", margin: "15px" }}>
+            {/* Error Message */}
+            {error && <div className="alert alert-danger text-center">{error}</div>}
 
-                {/* Tournament Name: fully customizable */}
-                <label> Tournament Name:
-                    <input type="text" value={name} onChange={(e) => setName(e.target.value)} required />
-                </label>
-                {/* Tournament Type: drop-down menu with 3 options */}
-                <label> Tournament Type:
-                    <select value={type} onChange={(e) => setType(e.target.value)} required>
-                        <option value={"Swiss System"}>Swiss System</option>
-                        <option value={"Round-robin"}>Round Robin</option>
-                        <option value={"Knockout"}>Knockout</option>
-                    </select>
-                </label>
-                {/* Bye Value: */}
-                <label> Bye Value:
-                    {/*If Knockout OR Round-Robin selected, disable input*/} 
-                    {type === "Knockout" ? (
-                        //display message 
-                        //that informs user that input is disabled for this tournament type
-                        <input type="text" value={"*default 0 for Knockout*"} disabled /> 
-                    ) : 
-                    type === "Round-robin" ? (
-                        //display message 
-                        <input type="text" value={"*default 0 for Round-robin*"} disabled /> 
-                    //Otherwise, provide drop-down menu with 3 possible options
-                    ) : (
-                        <select value={byeVal} onChange={(e) => setByeVal(Number(e.target.value))} required>
-                            <option value={0}>0</option>
-                            <option value={0.5}>0.5</option>
-                            <option value={1}>1</option>
+            {/* Form Container */}
+            <div className="card shadow-lg p-4 mx-auto" style={{ maxWidth: "500px" }}>
+                <form onSubmit={createTournament}>
+                    
+                    {/* Tournament Name */}
+                    <div className="mb-3">
+                        <label className="form-label">Tournament Name:</label>
+                        <input type="text" className="form-control" value={name} onChange={(e) => setName(e.target.value)} required />
+                    </div>
+
+                    {/* Tournament Type */}
+                    <div className="mb-3">
+                        <label className="form-label">Tournament Type:</label>
+                        <select className="form-select" value={type} onChange={(e) => setType(e.target.value)} required>
+                            <option value="Swiss System">Swiss System</option>
+                            <option value="Round-robin">Round Robin</option>
+                            <option value="Knockout">Knockout</option>
                         </select>
-                    )}
-                </label>
-                {/* Tie Break: */}
-                <label> Tie Break:
-                    {/*If Knockout selected, disable input*/}
-                    {type === "Knockout" ? 
-                        <input type="text" value={"*unavailable for Knockout*"} disabled /> 
-                        //Otherwise, provide drop-down menu with 4 options
-                        : 
-                        <select value={tieBreak} onChange={(e) => setTieBreak(e.target.value)} required>
-                            <option value={"Buchholz Total"}>Buchholz Total</option>
-                            <option value={"Buchholz Cut 1"}>Buchholz Cut 1</option>
-                            <option value={"Buchholz Cut Median"}>Buchholz Cut Median</option>
-                            <option value={"Sonneborn-Berger"}>Sonneborn-Berger</option>
-                        </select>
-                    }
-                </label>
-                {/* Hide Rating: tickbox*/}
-                <label> Hide Rating:
-                    <input type="checkbox" checked={hideRating} onChange={(e) => setHideRating(e.target.checked)} />
-                </label>
+                    </div>
 
-                <button type="submit">Create Tournament</button>
-                
-            </form> 
+                    {/* Bye Value */}
+                    <div className="mb-3">
+                        <label className="form-label">Bye Value:</label>
+                        {type === "Knockout" || type === "Round-robin" ? (
+                            <input type="text" className="form-control" value="*default 0 for this format*" disabled />
+                        ) : (
+                            <select className="form-select" value={byeVal} onChange={(e) => setByeVal(Number(e.target.value))} required>
+                                <option value={0}>0</option>
+                                <option value={0.5}>0.5</option>
+                                <option value={1}>1</option>
+                            </select>
+                        )}
+                    </div>
+
+                    {/* Tie Break */}
+                    <div className="mb-3">
+                        <label className="form-label">Tie Break:</label>
+                        {type === "Knockout" ? (
+                            <input type="text" className="form-control" value="*unavailable for Knockout*" disabled />
+                        ) : (
+                            <select className="form-select" value={tieBreak} onChange={(e) => setTieBreak(e.target.value)} required>
+                                <option value="Buchholz Total">Buchholz Total</option>
+                                <option value="Buchholz Cut 1">Buchholz Cut 1</option>
+                                <option value="Buchholz Cut Median">Buchholz Cut Median</option>
+                                <option value="Sonneborn-Berger">Sonneborn-Berger</option>
+                            </select>
+                        )}
+                    </div>
+
+                    {/* Hide Rating Checkbox */}
+                    <div className="form-check mb-3">
+                        <input className="form-check-input" type="checkbox" checked={hideRating} onChange={(e) => setHideRating(e.target.checked)} />
+                        <label className="form-check-label">Hide Rating</label>
+                    </div>
+
+                    {/* Submit Button */}
+                    <div className="text-center">
+                        <button type="submit" className="btn btn-primary px-4 py-2">Create Tournament</button>
+                    </div>
+
+                </form>
+            </div>
         </div>
     );
 }

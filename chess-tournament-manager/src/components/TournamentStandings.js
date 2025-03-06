@@ -102,60 +102,66 @@ const DisplayStandings = () => {
     //Display the component
     return (
         <div>
-            <h2>{tournamentDetails.name}: Standings</h2>
+            <div class="container mt-4">
+                <h2 class="mb-3">{tournamentDetails.name}: Standings</h2>
 
-            <div>
-
-                {/*Table of Players*/}
-                <table style={{ border: "1px solid black" }}>
-                    <thead>
-                        <tr>
-                            <th>Position</th>
-                            <th>Name</th>
-                            {/*if hide rrating is enabled, do not show rating*/}
-                            { tournamentDetails.hide_rating ? null : <th>Rating</th> }
-                            <th>Points</th>
-                            {/*mapping is used to make the number of column dynamic and correspond to the number of rounds in the list*/}
-                            {rounds.map((result, index) => (
-                                    <th key={index}>R{index + 1}</th>
+                <div class="d-flex flex-column gap-3">
+                    {/* Table of Players */}
+                    <div class="table-responsive">
+                        <table class="table table-striped table-bordered text-center">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Position</th>
+                                    <th>Name</th>
+                                    {/* if hide_rating is enabled, do not show rating */}
+                                    {!tournamentDetails.hide_rating && <th>Rating</th>}
+                                    <th>Points</th>
+                                    {/* mapping is used to make the number of columns dynamic and correspond to the number of rounds in the list */}
+                                    {rounds.map((result, index) => (
+                                        <th key={index}>R{index + 1}</th>
+                                    ))}
+                                    {/* For Knockout, tie break system will be automatically disabled */}
+                                    {tournamentDetails.tie_break !== null && <th>Tie Break Pts.</th>}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {/* dynamic number of rows (section is referred to as a row) */}
+                                {standings.map((section, index) => (
+                                    <tr key={index}>
+                                        {/* Position */}
+                                        <td>{index + 1}</td>
+                                        {/* Name and rating (if rating is enabled) */}
+                                        <td>{section.name}</td>
+                                        {!tournamentDetails.hide_rating && <td>{section.rating}</td>}
+                                        {/* Cumulative points for each player */}
+                                        <td>{section.player_points}</td>
+                                        {/* Dynamic number of round results rendered */}
+                                        {section.rounds_result.map((result, index) => (
+                                            <td key={index}>{result}</td>
+                                        ))}
+                                        {/* For Knockout, tie break system will be automatically disabled */}
+                                        {tournamentDetails.tie_break !== null && <td>{section.tiebreak_points}</td>}
+                                    </tr>
                                 ))}
-                            {/*For Knockout, tie break system will be automatically disabled*/}
-                            { tournamentDetails.tie_break ===  null ? null : <th>Tie Break Pts.</th> }  
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {/*dynamic number of rows (section is referred to as a row)*/}
-                        {standings.map((section, index) => (
-                            <tr key={index}>
-                                {/*Position*/}
-                                <td>{index + 1}</td>
-                                {/*Name and rating (if rating is enabled)*/}
-                                <td>{section.name}</td>
-                                { tournamentDetails.hide_rating ? null : <th>{section.rating}</th> }
-                                {/*Cumulative points for each player*/}
-                                <td>{section.player_points}</td>
-                                {/*Dynamic number of round results rendered*/}
-                                {section.rounds_result.map((result, index) => (
-                                    <th key={index}>{result}</th>
-                                ))}
-                                {/*For Knockout, tie break system will be automatically disabled*/}
-                                { tournamentDetails.tie_break ===  null ? null : <td>{section.tiebreak_points}</td> }
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
 
-                <button onClick={saveCSV}>Save CSV</button>
+                {/* Save CSV Button */}
+                <div>
+                    <button class="btn btn-secondary me-2" onClick={saveCSV}>Save CSV</button>
+                </div>
+                
 
+                {/* Navigation Buttons */}
+                <div class="btn-group mt-3 mb-5">
+                    <button class="btn btn-outline-secondary active" disabled>Standings</button>
+                    <button className="btn btn-outline-primary" onClick={() => navigate(`/tournament/${tournamentId}/players`)}>Players</button>
+                    <button class="btn btn-outline-primary" onClick={() => navigate(`/tournament/${tournamentId}/rounds`)}>Rounds</button>
+                    <button class="btn btn-outline-primary" onClick={() => navigate(`/tournament/${tournamentId}/settings`)}>Settings</button>
+                </div>
             </div>
-
-            <div>
-                <button onClick={() => navigate(`/tournament/${tournamentId}/standings`)}>Standings</button>
-                <button onClick={() => navigate(`/tournament/${tournamentId}/players`)}>Players</button>
-                <button onClick={() => navigate(`/tournament/${tournamentId}/rounds`)}>Rounds</button>
-                <button onClick={() => navigate(`/tournament/${tournamentId}/settings`)}>Settings</button>
-            </div>
-
         </div>
 
 

@@ -160,7 +160,8 @@ function MyAccount() {
 
 
     //Function to change user details
-    const changePersonalDetails = async () => {
+    const changePersonalDetails = async e => {
+        e.preventDefault();
         //empty error and success message
         setError("");
         setSuccessMessage("");
@@ -200,7 +201,8 @@ function MyAccount() {
 
 
     //Function to change user password
-    const changePassword = async () => {
+    const changePassword = async e => {
+        e.preventDefault();
         //empty error and success message
         setError("");
         setSuccessMessage("");
@@ -286,53 +288,84 @@ function MyAccount() {
     }, []);
   
     //Display contents
-     return (
-        <div>
-            {/* Display page title, username and email (using states), immutable*/}
-            <h1>My Account</h1>
-            <label>Username: <input type="text" value={usernameOriginal} readOnly /> </label>
-            <label>Email: <input type="text" value={emailOriginal} readOnly /> </label>
-            {/* Button to trigger ser-req funcs: log out */}
-            <button onClick={logOut}>Log Out</button>
-            <button onClick={openModalDetails}>Change Personal Details</button>
-            <button onClick={openModalDelConf}>Delete Account</button>
+    return (
+        <div className="container mt-4">
+            {/* Page Title */}
+            <h1 className="mb-3">My Account</h1>
 
-            {/* Change Personal Details Pop-up */}
-            {/*errorDisplay and successDisplay both use states*/}
+            {/* Display Username and Email */}
+            <div className="bg-light p-4 rounded shadow-sm" style={{ maxWidth: "500px" }}>
+                <fieldset className="border p-3 rounded">
+                    <legend className="w-auto">Account Details</legend>
+                    <div className="mb-3">
+                        <label className="form-label">Username:</label>
+                        <input type="text" className="form-control" value={usernameOriginal} readOnly />
+                    </div>
+                    <div className="mb-3">
+                        <label className="form-label">Email:</label>
+                        <input type="text" className="form-control" value={emailOriginal} readOnly />
+                    </div>
+                </fieldset>
+            </div>
+
+            {/* Account Management Buttons */}
+            <div className="d-flex gap-2 mt-3">
+                <button className="btn btn-secondary" onClick={logOut}>Log Out</button>
+                <button className="btn btn-primary" onClick={openModalDetails}>Change Personal Details</button>
+                <button className="btn btn-danger" onClick={openModalDelConf}>Delete Account</button>
+            </div>
+
+            {/* Change Personal Details Modal */}
             <Modal isOpen={isModalOpenDetails} onClose={closeModalDetails} title="Personal Details" errorDisplay={error} successDisplay={successMessage}>
-                {/* Form to change personal details {child prop)*/}
-                <form style={{ display: 'flex', flexDirection: 'column' }}>
-                    <label>First Name: <input type="text" value={firstName} onChange={(e) => setFirstName(e.target.value)} required /> </label>
-                    <label>Surname: <input type="text" value={surname} onChange={(e) => setSurname(e.target.value)} required /> </label>
-                    <label>Email: <input type="text" value={email} onChange={(e) => setEmail(e.target.value)} required /> </label>
+                <form className="d-flex flex-column gap-3">
+                    <div>
+                        <label className="form-label">First Name:</label>
+                        <input type="text" className="form-control" value={firstName} onChange={(e) => setFirstName(e.target.value)} required />
+                    </div>
+                    <div>
+                        <label className="form-label">Surname:</label>
+                        <input type="text" className="form-control" value={surname} onChange={(e) => setSurname(e.target.value)} required />
+                    </div>
+                    <div>
+                        <label className="form-label">Email:</label>
+                        <input type="text" className="form-control" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                    </div>
+                    <div className="d-flex gap-2">
+                        <button className="btn btn-secondary" onClick={openModalPassword}>Change Password</button>
+                        <button className="btn btn-primary" onClick={changePersonalDetails}>Save Changes</button>
+                    </div>
                 </form>
-                {/* Buttons to open password window or save changes */}
-                <button onClick={openModalPassword}>Change Password</button>
-                <button onClick={changePersonalDetails}>Save Changes</button>    
             </Modal>
 
-            {/* Change Password Pop-up */}
-            {/*errorDisplay and successDisplay both use states*/}
-            <Modal isOpen={isModalOpenPassword} onClose={closeModalPassword} title="Personal Details" errorDisplay={error} successDisplay={successMessage}>
-                {/* Form to change password {child prop)*/}
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    <label>Password: <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required /> </label>
-                    <label>New Password: <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required/> </label>
-                    <label>Re-Enter Password: 
-                        <input type="password" value={newReEnteredPassword} onChange={(e) => setNewReEnteredPassword(e.target.value)} required /> 
-                    </label>
+            {/* Change Password Modal */}
+            <Modal isOpen={isModalOpenPassword} onClose={closeModalPassword} title="Change Password" errorDisplay={error} successDisplay={successMessage}>
+                <div className="d-flex flex-column gap-3">
+                    <div>
+                        <label className="form-label">Current Password:</label>
+                        <input type="password" className="form-control" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                    </div>
+                    <div>
+                        <label className="form-label">New Password:</label>
+                        <input type="password" className="form-control" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required />
+                    </div>
+                    <div>
+                        <label className="form-label">Re-Enter New Password:</label>
+                        <input type="password" className="form-control" value={newReEnteredPassword} onChange={(e) => setNewReEnteredPassword(e.target.value)} required />
+                    </div>
+                    <button className="btn btn-primary" onClick={changePassword}>Save New Password</button>
                 </div>
-                {/* Button to save new password */}
-                <button onClick={changePassword}>Save New Password</button>    
             </Modal>
 
-            {/* Delete Confirmation Pop-up */}
+            {/* Delete Confirmation Modal */}
             <Modal isOpen={isModalOpenDelConf} onClose={closeModalDelConf} title="Delete Your Account" errorDisplay={error}>
-                {/* Confirmation message and choice buttons {child prop}*/}
-                <h3>Are you sure you want to delete your account?</h3>
-                <p>All your tournaments will be permanently lost.</p>
-                <button onClick={deleteAccount}>Confirm</button>
-                <button onClick={closeModalDelConf}>Cancel</button>      
+                <div className="text-center">
+                    <h3 className="text-danger">Are you sure?</h3>
+                    <p>All your tournaments will be permanently lost.</p>
+                    <div className="d-flex justify-content-center gap-2">
+                        <button className="btn btn-danger" onClick={deleteAccount}>Confirm</button>
+                        <button className="btn btn-secondary" onClick={closeModalDelConf}>Cancel</button>
+                    </div>
+                </div>
             </Modal>
         </div>
     );

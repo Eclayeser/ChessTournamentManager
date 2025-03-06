@@ -105,8 +105,6 @@ const TournamentSettings = () => {
                         hide_rating: hideRating
             }; 
 
-            console.log(body);
-
             //send request to server with dynamic URL
             const response = await fetch(`http://localhost:5000/tournament/${tournamentId}/update-details`, {
                 method: "PUT",
@@ -188,70 +186,88 @@ const TournamentSettings = () => {
 
     //Display component
     return (
-        <div>
-            <h1>{tournament.name}: Settings</h1>
-            <h3>Tournament Status: {status}</h3>
+        <div className="container mt-4">
+            {/* Header */}
+            <h1 className="mb-3">{tournament.name}: Settings</h1>
+            <h3 className="text-muted">Tournament Status: {status}</h3>
 
-            {error && <p style={{color:"red"}}>{error}</p>}
-            {successMessage && <p style={{color:"green"}}>{successMessage}</p>}
+            {/* Error & Success Messages */}
+            {error && <p className="alert alert-danger">{error}</p>}
+            {successMessage && <p className="alert alert-success">{successMessage}</p>}
 
-            {/*Form to update tournament details*/}
-            <form onSubmit={updateTournamentDetails} style={{ display: "flex", flexDirection: "column", maxWidth: "400px", margin: "15px" }}>
+            {/* Update Tournament Form */}
+            <form onSubmit={updateTournamentDetails} className="bg-light p-4 rounded shadow-sm" style={{ maxWidth: "500px" }}>
+                <fieldset className="border p-3 rounded">
+                    <legend className="w-auto">Tournament Details</legend>
 
-                <label> Tournament Name:
-                    <input type="text" value={name} onChange={(e) => setName(e.target.value)} required />
-                </label>
+                    {/* Tournament Name */}
+                    <div className="mb-3">
+                        <label htmlFor="name" className="form-label">Tournament Name:</label>
+                        <input type="text" id="name" className="form-control" value={name} onChange={(e) => setName(e.target.value)} required />
+                    </div>
 
-                {/* Tournament Type */}
-                <label> Tournament Type:
-                    {/*designed to only display the type of the tournament*/}
-                    <input type="text" value={type} disabled />
-                </label>
+                    {/* Tournament Type (Read-Only) */}
+                    <div className="mb-3">
+                        <label className="form-label">Tournament Type:</label>
+                        <input type="text" className="form-control" value={type} disabled />
+                    </div>
 
-                <label> Bye Value:
-                    {/*Include check to disable input if tournament is not in initial state*/}
-                    {(tournament.type === "Knockout" || tournament.type === "Round-robin" || tournament.status !== "initialised") ? (
-                        <input type="number" value={byeVal} disabled />
-                    ) : (
-                        <select value={byeVal} onChange={(e) => setByeVal(Number(e.target.value))} required>
-                            <option value={0}>0</option>
-                            <option value={0.5}>0.5</option>
-                            <option value={1}>1</option>
-                        </select>
-                    )}
-                </label>
+                    {/* Bye Value (Disabled if Not "Initialised") */}
+                    <div className="mb-3">
+                        <label className="form-label">Bye Value:</label>
+                        {(tournament.type === "Knockout" || tournament.type === "Round-robin" || tournament.status !== "initialised") ? (
+                            <input type="number" className="form-control" value={byeVal} disabled />
+                        ) : (
+                            <select className="form-select" value={byeVal} onChange={(e) => setByeVal(Number(e.target.value))} required>
+                                <option value={0}>0</option>
+                                <option value={0.5}>0.5</option>
+                                <option value={1}>1</option>
+                            </select>
+                        )}
+                    </div>
 
-                <label> Tie Break:
-                    <input type="text" value={tieBreak} disabled />
-                </label>
+                    {/* Tie Break (Read-Only) */}
+                    <div className="mb-3">
+                        <label className="form-label">Tie Break:</label>
+                        <input type="text" className="form-control" value={tieBreak} disabled />
+                    </div>
 
-                <label> Hide Rating:
-                    <input type="checkbox" checked={hideRating} onChange={(e) => setHideRating(e.target.checked)} />
-                </label>
+                    {/* Hide Rating Checkbox */}
+                    <div className="form-check mb-3 ">
+                        <input className="form-check-input" type="checkbox" id="hideRating" checked={hideRating} onChange={(e) => setHideRating(e.target.checked)} />
+                        <label className="form-check-label" htmlFor="hideRating">Hide Rating</label>
+                    </div>
 
-                <button type="submit">Save Changes</button>
-                
-            </form> 
-            <button onClick={openModalDelConf}>Delete</button>
+                    {/* Save Button */}
+                    <button type="submit" className="btn btn-primary">Save Changes</button>
+                </fieldset>
+            </form>
 
-            {/*Navigation buttons*/}
             <div>
-                <button onClick={() => navigate(`/tournament/${tournamentId}/standings`)}>Standings</button>
-                <button onClick={() => navigate(`/tournament/${tournamentId}/players`)}>Players</button>
-                <button onClick={() => navigate(`/tournament/${tournamentId}/rounds`)}>Rounds</button>
-                <button onClick={() => navigate(`/tournament/${tournamentId}/settings`)}>Settings</button>
+                {/* Delete Button */}
+                <button className="btn btn-danger mt-3" onClick={openModalDelConf}>Delete Tournament</button>
             </div>
 
-            {/*Delete Confirmation Modal*/}
-            <Modal isOpen={isModalOpenDelConf} onClose={closeModalDelConf} title="Delete Confirmation" errorDisplay={error}>
-                {/*Confirmation message*/}
-                <h3>Are you sure you want to delete this tournament?</h3>
-                <p>All the tournament data will be permanently lost.</p>
-                {/*Buttons to confirm or cancel operation*/}
-                <button onClick={deleteTournament}>Confirm</button>
-                <button onClick={closeModalDelConf}>Cancel</button>  
-            </Modal>
+            {/* Navigation Buttons */}
+            <div className="btn-group mt-4 mb-5">
+                <button className="btn btn-outline-primary" onClick={() => navigate(`/tournament/${tournament.tournament_id}/standings`)}>Standings</button>
+                <button className="btn btn-outline-primary" onClick={() => navigate(`/tournament/${tournament.tournament_id}/players`)}>Players</button>
+                <button className="btn btn-outline-primary" onClick={() => navigate(`/tournament/${tournament.tournament_id}/rounds`)}>Rounds</button>
+                <button className="btn btn-outline-secondary active" disabled>Settings</button>
+            </div>
+            
 
+            {/* Delete Confirmation Modal */}
+            <Modal isOpen={isModalOpenDelConf} onClose={closeModalDelConf} title="Delete Tournament">
+                <div className="text-center">
+                    <h3 className="text-danger">Are you sure?</h3>
+                    <p>All tournament data will be permanently deleted.</p>
+                    <div className="d-flex justify-content-center gap-2">
+                        <button className="btn btn-danger" onClick={deleteTournament}>Confirm</button>
+                        <button className="btn btn-secondary" onClick={closeModalDelConf}>Cancel</button>
+                    </div>
+                </div>
+            </Modal>
         </div>
     );
 };

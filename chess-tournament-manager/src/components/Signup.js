@@ -61,26 +61,90 @@ const SignupUser = () => {
 
     //Display contents
     return (
-        <div>
+        <div className="container d-flex flex-column align-items-center justify-content-center vh-100 mt-5 mb-4">
+            {/* Title */}
+            <h1 className="mb-4">Sign Up for ChessManager</h1>
+
+            {/* Dynamic Error Message */}
+            {error && <p className="text-danger">{error}</p>}
+
             {/* Form */}
-            <form onSubmit={createUser} style={{ display: "flex", flexDirection: "column", maxWidth: "400px", margin: "15px" }}>
-
-                <h2>Sign Up</h2>
-                {/* Dynamic Error Message */}
-                {error && <p style={{color: "red"}}>{error}</p>}
+            <form onSubmit={createUser} className="w-50 p-4 border rounded shadow bg-light">
                 {/* Input Fields */}
-                <label>First name: <input type="text" value={firstName} onChange={e => setFirstName(e.target.value)} required/></label>
-                <label>Surname: <input type="text" value={surname} onChange={e => setSurname(e.target.value)} required /></label>
-                <label>Username: <input type="text" value={username} onChange={e => setUsername(e.target.value)} required /></label>
-                <label>Email: <input type="email" value={email} onChange={e => setEmail(e.target.value)} required /></label>
-                <label>Password: <input type="password" value={password} onChange={e => setPassword(e.target.value)} required /></label>
-                <label>Re-enter password: <input type="password" value={rePassword} onChange={e => setRePassword(e.target.value)} required /></label>
-                {/* Submit button */}
-                <button type="submit">Sign Up</button>
+                <div className="mb-3">
+                    <label className="form-label">First Name:</label>
+                    <input
+                        type="text"
+                        className="form-control"
+                        value={firstName}
+                        onChange={(e) => setFirstName(e.target.value)}
+                        required
+                    />
+                </div>
 
+                <div className="mb-3">
+                    <label className="form-label">Surname:</label>
+                    <input
+                        type="text"
+                        className="form-control"
+                        value={surname}
+                        onChange={(e) => setSurname(e.target.value)}
+                        required
+                    />
+                </div>
+
+                <div className="mb-3">
+                    <label className="form-label">Username:</label>
+                    <input
+                        type="text"
+                        className="form-control"
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                        required
+                    />
+                </div>
+
+                <div className="mb-3">
+                    <label className="form-label">Email:</label>
+                    <input
+                        type="email"
+                        className="form-control"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                    />
+                </div>
+
+                <div className="mb-3">
+                    <label className="form-label">Password:</label>
+                    <input
+                        type="password"
+                        className="form-control"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                    />
+                </div>
+
+                <div className="mb-3">
+                    <label className="form-label">Re-enter Password:</label>
+                    <input
+                        type="password"
+                        className="form-control"
+                        value={rePassword}
+                        onChange={(e) => setRePassword(e.target.value)}
+                        required
+                    />
+                </div>
+
+                {/* Submit Button */}
+                <button type="submit" className="btn btn-primary w-100">Sign Up</button>
             </form>
-            {/* Back to login link */}
-            <p>Back to <Link to="/login">Login</Link></p>
+
+            {/* Back to Login Link */}
+            <div className="mt-3 text-center mb-4">
+                <p>Already have an account? <Link to="/login" className="text-decoration-none">Log In</Link></p>
+            </div>
         </div>
     );
 };
