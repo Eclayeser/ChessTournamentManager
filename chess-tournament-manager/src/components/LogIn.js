@@ -69,7 +69,7 @@ const LoginUser = () => {
                 vh-70 mt-5: 70% occuping height and margin to the top
             */}
             {/*Title*/}
-            <h1 className="mb-4">Log In to ChessManager</h1>
+            <h1 className="mb-4">Log In to ChessOrchestrator</h1>
             
             {/* Dynamic Error Message */}
             {error && <p className="text-danger">{error}</p>}

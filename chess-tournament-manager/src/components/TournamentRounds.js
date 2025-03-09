@@ -448,7 +448,7 @@ const RoundsDisplay = () => {
                 </div>
             )}
 
-            <div className="btn-group mt-4">
+            <div className="btn-group mt-4 mb-5">
                 <button className="btn btn-outline-primary" onClick={() => navigate(`/tournament/${tournamentId}/standings`)}>Standings</button>
                 <button className="btn btn-outline-primary" onClick={() => navigate(`/tournament/${tournamentId}/players`)}>Players</button>
                 <button className="btn btn-outline-secondary active" disabled>Rounds</button>

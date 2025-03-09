@@ -10,16 +10,16 @@ function Home() {
   return (
     <div className="container d-flex flex-column align-items-center justify-content-center vh-70 text-center mt-3 mb-3">
         {/* Title */}
-        <h1 className="mb-4">Welcome to Chess Manager</h1>
+        <h1 className="mb-4">Welcome to ChessOrchestrator</h1>
 
         {/* Description */}
         <div className="mb-4" style={{ maxWidth: "1000px" }}>
             <p className="lead">
-                <b>Chess Manager</b> is your ultimate tool for organizing and managing chess tournaments. 
-                Whether you're running a small club event or a large-scale competition, <b>Chess Manager</b> simplifies the process of organising and conducting various chess tournaments.
+                <b>ChessOrchestrator</b> is your irreplaceable tool for organizing and managing chess tournaments. 
+                Whether you're running a small club event or a large-scale competition, <b>ChessOrchestrator</b> simplifies the process of <i>"orchestrating"</i> any chess tournament under your control.
             </p>
             <p className="lead">
-                What you can do with <b>Chess Manager</b> :
+                What you can do with <b>ChessOrchestrator</b> :
             </p>
             <ul className="list-unstyled" >
                 <li>✅ <b>Create and manage tournaments</b> with 3 types available to you!</li>
@@ -29,7 +29,7 @@ function Home() {
                 <li>✅ <b>Get export options</b> for any data table that you want to print!</li>
             </ul>
             <p className="lead">
-                Let's popularise chess together with <b>Chess Manager</b>!
+                Let's popularise chess together with <b>ChessOrchestrator</b>!
             </p>
         </div>
 

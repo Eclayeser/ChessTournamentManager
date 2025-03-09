@@ -2779,7 +2779,7 @@ app.delete("/tournament/:id/delete-last-round", async (req, res) => {
 });
 
 //TournamentStandings.js Component Route: fetch standings
-app.get(`/tournament/:id/standings`, async (req, res) => {
+app.get(`/tournament/:id/standings`, async (req, res) => {6
     //returning object
     const resObject = { success: false, found: false, message: "", standings: null };
 

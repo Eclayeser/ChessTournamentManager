@@ -63,7 +63,7 @@ const SignupUser = () => {
     return (
         <div className="container d-flex flex-column align-items-center justify-content-center vh-100 mt-5 mb-4">
             {/* Title */}
-            <h1 className="mb-4">Sign Up for ChessManager</h1>
+            <h1 className="mb-4">Sign Up for ChessOrchestrator</h1>
 
             {/* Dynamic Error Message */}
             {error && <p className="text-danger">{error}</p>}
