@@ -1,18 +1,15 @@
 // Import necessary libraries and hooks
 import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-
-//Functional component
+//Initialise Functional component and set variables
 const LoginUser = () => {
     //variables
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
-
     //react-router-dom hooks
     const navigate = useNavigate();
-
-
+    //Server-requesting functions
     //event-handling function, to authenticate a user, triggered by form
     const authenticate = async e => {
         e.preventDefault();  
@@ -44,7 +41,6 @@ const LoginUser = () => {
             setError(err.message);
         };
     };
-
     //trigger every time the component is rendered
     useEffect(() => {
         //if sessionID is stored in local storage -> go to dashboard
@@ -58,8 +54,7 @@ const LoginUser = () => {
             localStorage.removeItem("globalMessage");       
         };
     }, []);
-
-    //Display contents
+    //Return contents
     return (
         <div className="container d-flex flex-column align-items-center justify-content-center vh-70 mt-5">
             {/* 
@@ -126,7 +121,6 @@ const LoginUser = () => {
         </div>
     );
 };
-
 //Export the component
 export default LoginUser;
 

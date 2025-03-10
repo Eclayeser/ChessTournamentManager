@@ -222,8 +222,7 @@ const DisplayPlayers = () => {
                 method: "GET",
                 headers: { "Content-Type": "application/json", "Session-Id": localStorage.getItem("sessionID") },
             });
-            
-            //response from server
+            //receive response from server
             const server_resObject = await response.json();
             // if operation successful
             if (server_resObject.success === true) {

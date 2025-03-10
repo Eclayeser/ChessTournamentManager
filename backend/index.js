@@ -65,24 +65,17 @@ setInterval(cleanUpSessions, 10 * 1000); // 10 seconds
 
 
 //VALIDATION CONSTRAINTS//
-
-//users: username, password, firstname, surname, email
+//<users>: username, password, firstname, surname, email
 const usernameConstraints = /^[a-zA-Z0-9_]{1,35}$/;
 const passwordConstraints = /^[a-zA-Z0-9_]{1,40}$/;
 const firstNameConstraints = /^[a-zA-Z\- ]{1,20}$/;
 const surnameConstraints = /^[a-zA-Z\- ]{1,20}$/;
 const emailConstraints = /^[a-zA-Z0-9\-.@]{1,50}$/;
-
-//tournaments: name, type, tie_break, hide_rating
+//<tournaments>: name, type, tie_break, hide_rating
 const tournamentNameConstraints = /^[a-zA-Z_0-9\- ]{1,50}$/;
-
-
 //<players>: name, club, email
-//Name: letters, hyphens, white space; length: 1-50
 const playerNameConstraints = /^[a-zA-Z\- ]{1,50}$/;
-//Club: letters, hyphens, white space, numbers; length: 1-50
 const clubConstraints = /^[a-zA-Z0-9\- ]{1,50}$/;
-//Email: letters, hyphens, dots, numbers, underscores, @; length: 1-50
 const playerEmailConstraints = /^[a-zA-Z0-9_.@]{1,50}$/;
 
 
@@ -104,8 +97,7 @@ function verifySession(givenSessionID) {
     };
 };
 
-//Validation Functions//
-
+//VALIDATION FUNCTIONS//
 //validate Tournament Details
 function verifyTournamentDetails(name, type, tie_break, hide_rating, bye_value) {
     const KEY = "=PASS="; //used to ignore particular value validation
@@ -160,7 +152,6 @@ function verifyTournamentDetails(name, type, tie_break, hide_rating, bye_value) 
     //return true if all constraints are met
     return { valid: true, message: message };
 };
-
 //validate User Details
 function verifyUserDetails(firstName, surname, username, email, password) {
     const KEY = "=PASS="; //used to ignore particular value validation
@@ -223,8 +214,6 @@ function verifyUserDetails(firstName, surname, username, email, password) {
     //return true if all constraints are met
     return { valid: true, message: message };
 };
-
-
 //validate Player Details
 function verifyPlayerDetails(name, rating, club, email) {
     const KEY = "=PASS="; //used to ignore particular value validation
@@ -278,8 +267,6 @@ function verifyPlayerDetails(name, rating, club, email) {
     //return true if all constraints are met
     return { valid: true, message: message };
 };
-
-
 //validate Entry Details
 function verifyEntryDetails(additional_points, eliminated) {
     const KEY = "=PASS="; //used to ignore particular value validation
@@ -402,7 +389,7 @@ async function authoriseRoundAccess(tournamentID, givenRoundID) {
 };
 
 
-//Data-Preparation Functions//
+//DATA-PREPARING FUNCTIONS//
 
 //Functiion: construct a list of objects that contain the player_id and the count of the number of times it has played white and black separately
 async function getPlayersColorCounts(tournamentId) {
@@ -454,8 +441,6 @@ async function getPlayersColorCounts(tournamentId) {
         console.error(error.message);
     };
 };
-  
-
 //Function: form a list of not eliminated players in the tournament (bye players go first)
 async function getNEPlayers(tournamentId) {
     try {
@@ -608,8 +593,6 @@ async function getNEPlayers(tournamentId) {
         console.error(error);
     };
 };
-
-
 //Function: form a list of objects to show what opponents has each player faced
 async function getPlayersOpponents(tournamentId) {
     try {
@@ -647,8 +630,6 @@ async function getPlayersOpponents(tournamentId) {
         console.error(error);
     }
 };
-
-
 //Function: form an object of player ids with their total points
 async function getPlayersCumulativePoints(tournamentId, roundNumber) {
     try {
@@ -858,7 +839,6 @@ async function updateEliminationStatus(tournamentId, roundNumber) {
 };
 
 //ROUTES//
-
 //Check Session Route
 app.get("/check-session", async (req, res) => {
     //returning object
@@ -882,7 +862,6 @@ app.get("/check-session", async (req, res) => {
         return res.json(resObject);
     }; 
 });
-
 //Login.js Component Route
 app.post("/login", async (req, res) => {
     //returning object
@@ -927,7 +906,6 @@ app.post("/login", async (req, res) => {
         return res.json(resObject);
     };
 });
-
 //Singup.js Component Route
 app.post("/signup", async (req, res) => {
     //returning object
@@ -986,7 +964,6 @@ app.post("/signup", async (req, res) => {
         return res.json(resObject);
     };
 });
-
 //Dashboard.js Component Route
 app.get("/fetch-tournaments", async (req, res) => {
     //returning object
@@ -1028,7 +1005,6 @@ app.get("/fetch-tournaments", async (req, res) => {
         return res.json(resObject);
     };
 });
-
 //TournamentSettings.js and TournamentRounds.js Component Route: fetch tournament details (can be used in other components)
 app.get("/tournament/:id/fetch-details", async (req, res) => {
     //returning object
@@ -1072,8 +1048,6 @@ app.get("/tournament/:id/fetch-details", async (req, res) => {
         return res.json(resObject);
     };
 });
-
-
 //Account.js Component Route: fetch user details
 app.get("/account", async (req, res) => {
     //returning object
